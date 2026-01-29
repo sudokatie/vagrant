@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-01-29
+
+### Added
+
+- **System keychain support** (spec 6.3 compliance)
+  - Secrets can be stored in system keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+  - Enable with `vagrant config set use_keychain true`
+  - Variables prefixed with `secret_` are stored in keychain instead of YAML files
+  - New `vagrant env keychain-status` command to check availability
+  - Automatic fallback to YAML storage if keychain unavailable
+- New `keyring` dependency for cross-platform keychain access
+- 20 new tests for secrets and keychain integration
+
+### Changed
+
+- Test count increased from 295 to 315
+
 ## [0.1.2] - 2026-01-29
 
 ### Security

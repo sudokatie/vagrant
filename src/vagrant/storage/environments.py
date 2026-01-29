@@ -10,8 +10,13 @@ from typing import Any
 
 import yaml
 
-from vagrant.core.config import get_config_dir
+from vagrant.core.config import get_config_dir, load_config
 from vagrant.http.auth import AuthConfig
+from vagrant.storage.secrets import SecretStorage, is_secret_variable
+
+
+# Placeholder stored in YAML when secret is in keychain
+KEYCHAIN_PLACEHOLDER = "{{keychain}}"
 
 
 @dataclass
@@ -66,16 +71,23 @@ class EnvironmentManager:
     """Manage environment configurations.
     
     Environments are stored as YAML files in ~/.config/vagrant/environments/
+    When use_keychain is enabled, secret_ prefixed variables are stored in
+    the system keychain instead of plain text in YAML files.
     """
 
     # Pattern for variable substitution: {{variable}} or {{env.VAR}} or {{response.path}}
     VAR_PATTERN = re.compile(r"\{\{\s*([^}]+?)\s*\}\}")
 
-    def __init__(self, config_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        config_dir: Path | None = None,
+        use_keychain: bool | None = None,
+    ) -> None:
         """Initialize environment manager.
         
         Args:
             config_dir: Config directory. Defaults to ~/.config/vagrant/
+            use_keychain: Override keychain setting. If None, uses config.
         """
         if config_dir is None:
             config_dir = get_config_dir()
@@ -85,6 +97,23 @@ class EnvironmentManager:
         
         # Store last response for {{response.field.path}} substitution
         self._last_response: dict[str, Any] | None = None
+        
+        # Initialize secret storage
+        self._secret_storage = SecretStorage()
+        
+        # Determine if keychain should be used
+        if use_keychain is not None:
+            self._use_keychain = use_keychain
+        else:
+            try:
+                config = load_config()
+                self._use_keychain = config.use_keychain
+            except Exception:
+                self._use_keychain = False
+        
+        # Only use keychain if it's enabled AND available
+        if self._use_keychain and not SecretStorage.is_available():
+            self._use_keychain = False
     
     def set_last_response(self, response_body: Any) -> None:
         """Store the last response body for variable substitution.
@@ -153,6 +182,9 @@ class EnvironmentManager:
     def get(self, name: str) -> Environment:
         """Load environment by name.
         
+        If keychain is enabled, secret_ variables are fetched from system
+        keychain rather than the YAML file.
+        
         Args:
             name: Environment name.
             
@@ -179,21 +211,53 @@ class EnvironmentManager:
         # Ensure name is set
         data["name"] = name
 
-        return Environment.from_dict(data)
+        env = Environment.from_dict(data)
+        
+        # If keychain enabled, fetch secret_ variables from keychain
+        if self._use_keychain:
+            for var_name, var_value in list(env.variables.items()):
+                if is_secret_variable(var_name):
+                    # Value is placeholder, fetch real value from keychain
+                    if var_value == KEYCHAIN_PLACEHOLDER:
+                        secret_value = self._secret_storage.get(name, var_name)
+                        if secret_value is not None:
+                            env.variables[var_name] = secret_value
+                        else:
+                            # Secret not found in keychain, remove from dict
+                            del env.variables[var_name]
+        
+        return env
 
     def save(self, env: Environment) -> None:
         """Save environment to file.
+        
+        If keychain is enabled, secret_ variables are stored in system
+        keychain and replaced with a placeholder in the YAML file.
         
         Args:
             env: Environment to save.
         """
         path = self.env_dir / f"{env.name}.yaml"
+        
+        # Create a copy of the environment for serialization
+        data = env.to_dict()
+        
+        # If keychain enabled, store secrets separately
+        if self._use_keychain:
+            for var_name, var_value in list(data["variables"].items()):
+                if is_secret_variable(var_name) and var_value != KEYCHAIN_PLACEHOLDER:
+                    # Store in keychain
+                    if self._secret_storage.set(env.name, var_name, var_value):
+                        # Replace with placeholder in YAML
+                        data["variables"][var_name] = KEYCHAIN_PLACEHOLDER
 
         with open(path, "w") as f:
-            yaml.safe_dump(env.to_dict(), f, default_flow_style=False)
+            yaml.safe_dump(data, f, default_flow_style=False)
 
     def delete(self, name: str) -> None:
         """Delete environment.
+        
+        If keychain is enabled, also deletes any secrets stored in keychain.
         
         Args:
             name: Environment name to delete.
@@ -203,6 +267,18 @@ class EnvironmentManager:
         """
         yaml_path = self.env_dir / f"{name}.yaml"
         yml_path = self.env_dir / f"{name}.yml"
+
+        # Get environment first to find secret variable names
+        if self._use_keychain:
+            try:
+                env = self.get(name)
+                secret_names = [
+                    var_name for var_name in env.variables
+                    if is_secret_variable(var_name)
+                ]
+                self._secret_storage.delete_environment(name, secret_names)
+            except FileNotFoundError:
+                pass  # Will raise below
 
         if yaml_path.exists():
             yaml_path.unlink()

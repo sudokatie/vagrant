@@ -27,6 +27,7 @@ Vagrant collapses this into: point, click, explore.
 - **Request history** - See what you've tried, replay it
 - **Environments** - Switch between prod/staging/local with one keystroke
 - **Multiple auth types** - Bearer, Basic, API key
+- **Secure secret storage** - Optional system keychain integration
 
 ## Quick Start
 
@@ -88,7 +89,30 @@ default_environment: production
 history_limit: 1000
 timeout: 30
 verify_ssl: true
+use_keychain: false
 ```
+
+### Secure Secret Storage
+
+Store API keys and tokens in your system's secure keychain instead of plain text:
+
+```bash
+# Check if keychain is available
+vagrant env keychain-status
+
+# Enable keychain storage
+vagrant config set use_keychain true
+
+# Secrets use the secret_ prefix
+vagrant env set secret_api_key "your-api-key" -e production
+```
+
+With keychain enabled, variables prefixed with `secret_` are stored in:
+- macOS Keychain
+- Windows Credential Manager  
+- Linux Secret Service (GNOME Keyring, KWallet)
+
+Non-secret variables remain in YAML files for easy editing.
 
 ## License
 

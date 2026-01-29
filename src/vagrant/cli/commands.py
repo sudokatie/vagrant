@@ -576,10 +576,13 @@ def env_show(name: str) -> None:
 def env_set(gctx: GlobalContext, name: str, value: str) -> None:
     """Set a variable in the current environment.
     
-    NAME is the variable name.
+    NAME is the variable name. Use secret_ prefix for secrets.
     VALUE is the variable value.
     
     Uses the environment specified by --env or the default environment.
+    
+    If use_keychain is enabled, variables prefixed with secret_ will be
+    stored in the system keychain instead of the YAML file.
     """
     manager = EnvironmentManager()
     config = load_config()
@@ -597,7 +600,51 @@ def env_set(gctx: GlobalContext, name: str, value: str) -> None:
     environment = manager.get(env_name)
     environment.variables[name] = value
     manager.save(environment)
-    output_print(f"[green]Set {name} in '{env_name}'[/green]")
+    
+    # Indicate if stored in keychain
+    from vagrant.storage.secrets import is_secret_variable
+    if is_secret_variable(name) and config.use_keychain:
+        output_print(f"[green]Set {name} in '{env_name}' (stored in keychain)[/green]")
+    else:
+        output_print(f"[green]Set {name} in '{env_name}'[/green]")
+
+
+@env.command("keychain-status")
+@handle_errors
+def env_keychain_status() -> None:
+    """Show keychain status and configuration.
+    
+    Displays whether system keychain is available and enabled.
+    """
+    from vagrant.storage.secrets import SecretStorage
+    
+    config = load_config()
+    available = SecretStorage.is_available()
+    enabled = config.use_keychain
+    
+    output_print("[bold]Keychain Status[/bold]")
+    output_print()
+    
+    if available:
+        output_print("  System keychain: [green]available[/green]")
+    else:
+        output_print("  System keychain: [red]not available[/red]")
+        output_print("  [dim]Install keyring backends or check system configuration[/dim]")
+    
+    if enabled:
+        output_print("  Keychain storage: [green]enabled[/green]")
+    else:
+        output_print("  Keychain storage: [dim]disabled[/dim]")
+        output_print("  [dim]Enable with: vagrant config set use_keychain true[/dim]")
+    
+    if enabled and available:
+        output_print()
+        output_print("  [green]Secrets will be stored securely in system keychain.[/green]")
+        output_print("  [dim]Variables prefixed with secret_ are stored in keychain.[/dim]")
+    elif enabled and not available:
+        output_print()
+        output_print("  [yellow]Warning: Keychain enabled but not available.[/yellow]")
+        output_print("  [dim]Secrets will be stored in plain text until keychain is available.[/dim]")
 
 
 @cli.group()

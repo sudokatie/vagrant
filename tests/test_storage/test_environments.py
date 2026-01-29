@@ -402,3 +402,117 @@ class TestEnvironmentManagerResponseSubstitution:
         assert manager._get_response_value("int_val") == "42"
         assert manager._get_response_value("float_val") == "3.14"
         assert manager._get_response_value("bool_val") == "True"
+
+
+class TestKeychainIntegration:
+    """Tests for keychain integration with environment manager."""
+
+    @pytest.fixture
+    def mock_keyring(self, monkeypatch):
+        """Mock keyring module for testing."""
+        stored = {}
+
+        def mock_get_password(service, key):
+            return stored.get(f"{service}:{key}")
+
+        def mock_set_password(service, key, value):
+            stored[f"{service}:{key}"] = value
+
+        def mock_delete_password(service, key):
+            stored_key = f"{service}:{key}"
+            if stored_key in stored:
+                del stored[stored_key]
+
+        # Import and patch keyring
+        import vagrant.storage.secrets as secrets_module
+        monkeypatch.setattr(secrets_module, "KEYRING_AVAILABLE", True)
+        
+        import keyring
+        monkeypatch.setattr(keyring, "get_password", mock_get_password)
+        monkeypatch.setattr(keyring, "set_password", mock_set_password)
+        monkeypatch.setattr(keyring, "delete_password", mock_delete_password)
+        
+        # Mock is_available to return True
+        monkeypatch.setattr(secrets_module.SecretStorage, "is_available", staticmethod(lambda: True))
+
+        return stored
+
+    @pytest.fixture
+    def keychain_manager(self, temp_config_dir: Path, mock_keyring) -> EnvironmentManager:
+        """Create environment manager with keychain enabled."""
+        return EnvironmentManager(config_dir=temp_config_dir, use_keychain=True)
+
+    def test_save_secret_to_keychain(self, keychain_manager: EnvironmentManager, mock_keyring):
+        """Secrets are stored in keychain when enabled."""
+        env = Environment(
+            name="production",
+            variables={"secret_api_key": "my-secret-value", "normal_var": "visible"}
+        )
+        keychain_manager.save(env)
+        
+        # Secret should be in keychain
+        assert mock_keyring.get("vagrant:production:secret_api_key") == "my-secret-value"
+
+    def test_load_secret_from_keychain(self, keychain_manager: EnvironmentManager, mock_keyring):
+        """Secrets are loaded from keychain when enabled."""
+        # Pre-store secret in keychain
+        mock_keyring["vagrant:production:secret_api_key"] = "stored-secret"
+        
+        # Save env with placeholder
+        env = Environment(
+            name="production",
+            variables={"secret_api_key": "{{keychain}}", "normal_var": "visible"}
+        )
+        keychain_manager.save(env)
+        
+        # Load should get secret from keychain
+        loaded = keychain_manager.get("production")
+        assert loaded.variables["secret_api_key"] == "stored-secret"
+        assert loaded.variables["normal_var"] == "visible"
+
+    def test_normal_vars_not_in_keychain(self, keychain_manager: EnvironmentManager, mock_keyring):
+        """Non-secret variables are stored in YAML, not keychain."""
+        env = Environment(
+            name="test",
+            variables={"api_version": "v1", "timeout": "30"}
+        )
+        keychain_manager.save(env)
+        
+        # Nothing should be in keychain
+        assert len([k for k in mock_keyring if "test:" in k]) == 0
+        
+        # Should load from YAML
+        loaded = keychain_manager.get("test")
+        assert loaded.variables["api_version"] == "v1"
+        assert loaded.variables["timeout"] == "30"
+
+    def test_delete_removes_secrets_from_keychain(self, keychain_manager: EnvironmentManager, mock_keyring):
+        """Deleting environment removes secrets from keychain."""
+        env = Environment(
+            name="staging",
+            variables={"secret_token": "secret-value"}
+        )
+        keychain_manager.save(env)
+        
+        # Verify secret is in keychain
+        assert mock_keyring.get("vagrant:staging:secret_token") == "secret-value"
+        
+        # Delete environment
+        keychain_manager.delete("staging")
+        
+        # Secret should be removed from keychain
+        assert "vagrant:staging:secret_token" not in mock_keyring
+
+    def test_keychain_disabled_stores_in_yaml(self, temp_config_dir: Path):
+        """When keychain disabled, secrets are stored in YAML."""
+        manager = EnvironmentManager(config_dir=temp_config_dir, use_keychain=False)
+        
+        env = Environment(
+            name="test",
+            variables={"secret_key": "plain-text-secret"}
+        )
+        manager.save(env)
+        
+        # Load should get secret from YAML
+        loaded = manager.get("test")
+        assert loaded.variables["secret_key"] == "plain-text-secret"

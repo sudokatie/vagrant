@@ -21,6 +21,7 @@ class Config:
         verify_ssl: Whether to verify SSL certificates.
         theme: Color theme for TUI.
         editor: External editor command for body editing.
+        use_keychain: Whether to store secrets in system keychain.
     """
 
     default_environment: str = "default"
@@ -29,6 +30,7 @@ class Config:
     verify_ssl: bool = True
     theme: Theme = "dark"
     editor: str = ""
+    use_keychain: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary for serialization."""
@@ -39,6 +41,7 @@ class Config:
             "verify_ssl": self.verify_ssl,
             "theme": self.theme,
             "editor": self.editor,
+            "use_keychain": self.use_keychain,
         }
 
     @classmethod
@@ -54,6 +57,7 @@ class Config:
             verify_ssl=data.get("verify_ssl", True),
             theme=data.get("theme", "dark"),
             editor=data.get("editor", ""),
+            use_keychain=data.get("use_keychain", False),
         )
 
 

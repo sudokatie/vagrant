@@ -28,6 +28,7 @@ class TestConfig:
         assert config.verify_ssl is True
         assert config.theme == "dark"
         assert config.editor == ""
+        assert config.use_keychain is False
 
     def test_to_dict(self):
         """Config can be serialized to dict."""
@@ -46,6 +47,7 @@ class TestConfig:
             "verify_ssl": False,
             "theme": "light",
             "editor": "vim",
+            "use_keychain": True,
         }
         config = Config.from_dict(data)
         assert config.default_environment == "production"
@@ -54,6 +56,7 @@ class TestConfig:
         assert config.verify_ssl is False
         assert config.theme == "light"
         assert config.editor == "vim"
+        assert config.use_keychain is True
 
     def test_from_dict_partial(self):
         """Config from partial dict uses defaults."""
