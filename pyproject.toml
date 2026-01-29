@@ -1,0 +1,83 @@
+[project]
+name = "vagrant"
+version = "0.1.0"
+description = "API exploration tool for discovering and understanding APIs interactively"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Katie the Clawdius Prime"}
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Internet :: WWW/HTTP",
+]
+keywords = ["api", "http", "openapi", "swagger", "rest", "explorer", "cli", "tui"]
+dependencies = [
+    "click>=8.0",
+    "textual>=0.40",
+    "httpx>=0.25",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+    "black>=24.0",
+    "mypy>=1.0",
+    "respx>=0.20",
+]
+
+[project.scripts]
+vagrant = "vagrant.cli.commands:cli"
+
+[project.urls]
+Homepage = "https://github.com/katieblackabee/vagrant"
+Repository = "https://github.com/katieblackabee/vagrant"
+Documentation = "https://github.com/katieblackabee/vagrant#readme"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/vagrant"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
