@@ -9,8 +9,10 @@ from vagrant.parser.models import (
     Response,
     Schema,
 )
+from vagrant.parser.openapi import OpenAPIParser, parse_spec
 
 __all__ = [
+    # Models
     "ApiSpec",
     "Server",
     "Operation",
@@ -18,4 +20,7 @@ __all__ = [
     "RequestBody",
     "Response",
     "Schema",
+    # Parser
+    "OpenAPIParser",
+    "parse_spec",
 ]
