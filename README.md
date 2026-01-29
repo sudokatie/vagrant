@@ -59,6 +59,12 @@ Launches an interactive terminal interface where you can:
 - Send requests and see formatted responses
 - Save interesting requests to history
 
+Use `--info` to see a quick spec summary without launching the TUI:
+
+```bash
+vagrant explore --info <spec-or-url>
+```
+
 ### Single Request
 
 ```bash

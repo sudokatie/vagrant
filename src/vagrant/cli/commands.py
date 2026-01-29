@@ -176,9 +176,10 @@ def cli(
 
 @cli.command()
 @click.argument("spec_or_url")
+@click.option("--info", "-i", is_flag=True, help="Show spec info without launching TUI")
 @pass_context
 @handle_errors
-def explore(gctx: GlobalContext, spec_or_url: str) -> None:
+def explore(gctx: GlobalContext, spec_or_url: str, info: bool) -> None:
     """Launch TUI explorer for an API.
     
     SPEC_OR_URL can be a path to an OpenAPI spec file or a URL.
@@ -186,46 +187,57 @@ def explore(gctx: GlobalContext, spec_or_url: str) -> None:
     # Parse the spec
     spec = parse_spec(spec_or_url)
 
-    output_print(f"[bold]{spec.title}[/bold] v{spec.version}")
-    if spec.description:
-        output_print(f"[dim]{spec.description}[/dim]")
-    output_print()
-
-    # Show server info
-    if spec.servers:
-        output_print("[bold]Servers:[/bold]")
-        for server in spec.servers:
-            desc = f" - {server.description}" if server.description else ""
-            output_print(f"  {server.url}{desc}")
+    # If --info flag, just show spec summary
+    if info:
+        output_print(f"[bold]{spec.title}[/bold] v{spec.version}")
+        if spec.description:
+            output_print(f"[dim]{spec.description}[/dim]")
         output_print()
 
-    # Show operations summary
-    output_print(f"[bold]Operations:[/bold] {len(spec.operations)} endpoints")
-    output_print()
+        if spec.servers:
+            output_print("[bold]Servers:[/bold]")
+            for server in spec.servers:
+                desc = f" - {server.description}" if server.description else ""
+                output_print(f"  {server.url}{desc}")
+            output_print()
 
-    # Group by tags
-    tags: dict[str, list] = {}
-    for op in spec.operations:
-        tag = op.tags[0] if op.tags else "default"
-        if tag not in tags:
-            tags[tag] = []
-        tags[tag].append(op)
+        output_print(f"[bold]Operations:[/bold] {len(spec.operations)} endpoints")
+        output_print()
 
-    for tag, ops in sorted(tags.items()):
-        output_print(f"[bold cyan]{tag}[/bold cyan]")
-        for op in ops:
-            method_colors = {
-                "GET": "green",
-                "POST": "blue",
-                "PUT": "yellow",
-                "PATCH": "yellow",
-                "DELETE": "red",
-            }
-            color = method_colors.get(op.method, "white")
-            output_print(f"  [{color}]{op.method:7}[/{color}] {op.path}")
+        tags: dict[str, list] = {}
+        for op in spec.operations:
+            tag = op.tags[0] if op.tags else "default"
+            if tag not in tags:
+                tags[tag] = []
+            tags[tag].append(op)
 
-    output_print()
-    output_print("[dim]TUI mode: vagrant tui <spec>[/dim]")
+        for tag, ops in sorted(tags.items()):
+            output_print(f"[bold cyan]{tag}[/bold cyan]")
+            for op in ops:
+                method_colors = {
+                    "GET": "green",
+                    "POST": "blue",
+                    "PUT": "yellow",
+                    "PATCH": "yellow",
+                    "DELETE": "red",
+                }
+                color = method_colors.get(op.method, "white")
+                output_print(f"  [{color}]{op.method:7}[/{color}] {op.path}")
+        return
+
+    # Load environment if specified
+    env = None
+    env_mgr = EnvironmentManager()
+    config = load_config()
+    
+    if gctx.env_name:
+        env = env_mgr.get(gctx.env_name)
+    elif config.default_environment and env_mgr.exists(config.default_environment):
+        env = env_mgr.get(config.default_environment)
+
+    # Launch TUI
+    from vagrant.tui.app import run_app
+    run_app(spec, env)
 
 
 @cli.command("import")
