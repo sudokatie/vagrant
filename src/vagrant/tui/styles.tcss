@@ -1,0 +1,171 @@
+/* Vagrant TUI Styles */
+
+/* Main layout */
+#main-container {
+    layout: horizontal;
+}
+
+#left-panel {
+    width: 30%;
+    min-width: 30;
+    border: solid $primary;
+}
+
+#right-panel {
+    width: 50%;
+    border: solid $secondary;
+}
+
+#history-panel {
+    width: 20%;
+    min-width: 20;
+    border: solid $accent;
+}
+
+/* Search */
+#search-input {
+    dock: top;
+    margin: 0 1;
+}
+
+/* Panels */
+#endpoint-browser {
+    height: 1fr;
+}
+
+#request-builder {
+    height: 40%;
+    border-bottom: solid $primary;
+    overflow-y: auto;
+}
+
+#response-viewer {
+    height: 60%;
+    overflow-y: auto;
+}
+
+/* Titles */
+.panel-title {
+    background: $surface;
+    padding: 0 1;
+    text-style: bold;
+}
+
+/* HTTP Methods */
+.method-get {
+    color: $success;
+}
+
+.method-post {
+    color: $primary;
+}
+
+.method-put {
+    color: $warning;
+}
+
+.method-patch {
+    color: $warning;
+}
+
+.method-delete {
+    color: $error;
+}
+
+.method-options {
+    color: $accent;
+}
+
+.method-head {
+    color: $accent;
+}
+
+/* Status bar */
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: $surface;
+    padding: 0 1;
+}
+
+/* Response status colors */
+.status-success {
+    color: $success;
+}
+
+.status-error {
+    color: $error;
+}
+
+.status-redirect {
+    color: $warning;
+}
+
+/* Loading state */
+.loading {
+    text-style: italic;
+    color: $text-muted;
+}
+
+/* Error state */
+.error-message {
+    color: $error;
+    padding: 1;
+}
+
+/* History entries */
+.history-entry {
+    padding: 0 1;
+}
+
+.history-entry:hover {
+    background: $surface;
+}
+
+/* Endpoint tree */
+.endpoint-node {
+    padding-left: 1;
+}
+
+.endpoint-deprecated {
+    text-style: strike;
+    color: $text-muted;
+}
+
+/* Request form */
+.form-field {
+    margin-bottom: 1;
+}
+
+.form-label {
+    text-style: bold;
+}
+
+.form-required {
+    color: $error;
+}
+
+/* Response viewer */
+.response-header {
+    background: $surface;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.response-body {
+    padding: 1;
+}
+
+/* Help overlay */
+#help-overlay {
+    align: center middle;
+    background: $surface 80%;
+}
+
+#help-content {
+    width: 60;
+    height: auto;
+    max-height: 80%;
+    border: solid $primary;
+    padding: 1 2;
+}

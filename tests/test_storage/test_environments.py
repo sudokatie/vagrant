@@ -280,3 +280,125 @@ class TestEnvironmentManagerSubstituteAll:
         assert result["count"] == 42
         assert result["enabled"] is True
         assert result["items"] == [1, 2, 3]
+
+
+class TestEnvironmentManagerResponseSubstitution:
+    """Tests for response variable substitution."""
+
+    def test_set_last_response_dict(self, manager: EnvironmentManager):
+        """set_last_response stores dict response."""
+        response = {"id": 123, "name": "test"}
+        manager.set_last_response(response)
+        assert manager._last_response == response
+
+    def test_set_last_response_non_dict(self, manager: EnvironmentManager):
+        """set_last_response ignores non-dict responses."""
+        manager.set_last_response("just a string")
+        assert manager._last_response is None
+        
+        manager.set_last_response([1, 2, 3])
+        assert manager._last_response is None
+
+    def test_substitute_response_simple(self, manager: EnvironmentManager):
+        """Substitute simple response field."""
+        env = Environment(name="test")
+        manager.set_last_response({"id": 123, "name": "John"})
+        
+        result = manager.substitute("User ID: {{response.id}}", env)
+        assert result == "User ID: 123"
+
+    def test_substitute_response_nested(self, manager: EnvironmentManager):
+        """Substitute nested response field."""
+        env = Environment(name="test")
+        manager.set_last_response({
+            "data": {
+                "user": {
+                    "id": 456,
+                    "email": "test@example.com"
+                }
+            }
+        })
+        
+        result = manager.substitute("Email: {{response.data.user.email}}", env)
+        assert result == "Email: test@example.com"
+
+    def test_substitute_response_array_index(self, manager: EnvironmentManager):
+        """Substitute response array element by index."""
+        env = Environment(name="test")
+        manager.set_last_response({
+            "items": [
+                {"name": "first"},
+                {"name": "second"},
+                {"name": "third"}
+            ]
+        })
+        
+        result = manager.substitute("Second item: {{response.items.1.name}}", env)
+        assert result == "Second item: second"
+
+    def test_substitute_response_missing_field(self, manager: EnvironmentManager):
+        """Missing response field left as-is."""
+        env = Environment(name="test")
+        manager.set_last_response({"id": 123})
+        
+        result = manager.substitute("{{response.nonexistent}}", env)
+        assert result == "{{response.nonexistent}}"
+
+    def test_substitute_response_no_response(self, manager: EnvironmentManager):
+        """No response stored leaves variable as-is."""
+        env = Environment(name="test")
+        # Don't set any response
+        
+        result = manager.substitute("{{response.id}}", env)
+        assert result == "{{response.id}}"
+
+    def test_substitute_response_array_out_of_bounds(self, manager: EnvironmentManager):
+        """Out of bounds array index left as-is."""
+        env = Environment(name="test")
+        manager.set_last_response({"items": [1, 2]})
+        
+        result = manager.substitute("{{response.items.99}}", env)
+        assert result == "{{response.items.99}}"
+
+    def test_substitute_response_invalid_array_index(self, manager: EnvironmentManager):
+        """Invalid array index (non-integer) left as-is."""
+        env = Environment(name="test")
+        manager.set_last_response({"items": [1, 2, 3]})
+        
+        result = manager.substitute("{{response.items.abc}}", env)
+        assert result == "{{response.items.abc}}"
+
+    def test_substitute_response_with_other_vars(self, manager: EnvironmentManager):
+        """Mix response vars with other variable types."""
+        env = Environment(
+            name="test",
+            base_url="https://api.example.com",
+            variables={"api_key": "secret"}
+        )
+        manager.set_last_response({"user_id": 789})
+        
+        result = manager.substitute(
+            "{{base_url}}/users/{{response.user_id}}?key={{api_key}}", 
+            env
+        )
+        assert result == "https://api.example.com/users/789?key=secret"
+
+    def test_get_response_value_non_dict_value(self, manager: EnvironmentManager):
+        """_get_response_value handles traversing to non-dict/non-list."""
+        manager.set_last_response({"value": "string"})
+        
+        # Trying to access a property on a string should return None
+        result = manager._get_response_value("value.length")
+        assert result is None
+
+    def test_get_response_value_converts_to_string(self, manager: EnvironmentManager):
+        """_get_response_value converts values to strings."""
+        manager.set_last_response({
+            "int_val": 42,
+            "float_val": 3.14,
+            "bool_val": True,
+        })
+        
+        assert manager._get_response_value("int_val") == "42"
+        assert manager._get_response_value("float_val") == "3.14"
+        assert manager._get_response_value("bool_val") == "True"

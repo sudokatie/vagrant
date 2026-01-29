@@ -216,3 +216,11 @@ class HistoryPanel(Widget):
         list_view = self.query_one("#history-list", ListView)
         list_view.clear()
         list_view.append(ListItem(Label("[empty-message]No history yet[/empty-message]")))
+
+    def refresh_entries(self, limit: int = 20) -> None:
+        """Alias for refresh_list for API consistency.
+        
+        Args:
+            limit: Maximum number of entries to show.
+        """
+        self.refresh_list(limit=limit)

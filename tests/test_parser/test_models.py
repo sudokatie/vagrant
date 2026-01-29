@@ -9,7 +9,9 @@ from vagrant.parser.models import (
     RequestBody,
     Response,
     Schema,
+    SecurityScheme,
     Server,
+    ServerVariable,
 )
 
 
@@ -221,6 +223,84 @@ class TestOperation:
         with pytest.raises(AttributeError):
             op.method = "POST"
 
+    def test_operation_with_security(self):
+        """Operation with security requirements (spec 3.4)."""
+        security = (
+            {"bearerAuth": ()},
+            {"apiKey": ()},
+        )
+        op = Operation(method="GET", path="/users", security=security)
+        assert len(op.security) == 2
+        assert "bearerAuth" in op.security[0]
+
+    def test_operation_with_oauth_scopes(self):
+        """Operation with OAuth scopes."""
+        security = ({"oauth2": ("read:users", "write:users")},)
+        op = Operation(method="POST", path="/users", security=security)
+        assert op.security[0]["oauth2"] == ("read:users", "write:users")
+
+
+class TestServerVariable:
+    """Tests for ServerVariable model (spec 3.4)."""
+
+    def test_server_variable_with_default(self):
+        """Server variable with just default."""
+        var = ServerVariable(default="v1")
+        assert var.default == "v1"
+        assert var.enum == ()
+
+    def test_server_variable_with_enum(self):
+        """Server variable with enum values."""
+        var = ServerVariable(default="v1", enum=("v1", "v2", "v3"))
+        assert var.enum == ("v1", "v2", "v3")
+
+    def test_server_variable_with_description(self):
+        """Server variable with description."""
+        var = ServerVariable(default="v1", description="API version")
+        assert var.description == "API version"
+
+
+class TestSecurityScheme:
+    """Tests for SecurityScheme model (spec 3.4)."""
+
+    def test_apikey_scheme(self):
+        """API key security scheme."""
+        scheme = SecurityScheme(
+            type="apiKey",
+            name="X-API-Key",
+            location="header",
+        )
+        assert scheme.type == "apiKey"
+        assert scheme.name == "X-API-Key"
+        assert scheme.location == "header"
+
+    def test_bearer_scheme(self):
+        """HTTP bearer security scheme."""
+        scheme = SecurityScheme(
+            type="http",
+            scheme="bearer",
+            bearer_format="JWT",
+        )
+        assert scheme.type == "http"
+        assert scheme.scheme == "bearer"
+        assert scheme.bearer_format == "JWT"
+
+    def test_basic_scheme(self):
+        """HTTP basic security scheme."""
+        scheme = SecurityScheme(
+            type="http",
+            scheme="basic",
+            description="Basic auth",
+        )
+        assert scheme.type == "http"
+        assert scheme.scheme == "basic"
+
+    def test_scheme_frozen(self):
+        """Security scheme is immutable."""
+        scheme = SecurityScheme(type="apiKey")
+        with pytest.raises(AttributeError):
+            scheme.type = "http"
+
 
 class TestServer:
     """Tests for Server model."""
@@ -238,6 +318,20 @@ class TestServer:
             description="Production server",
         )
         assert server.description == "Production server"
+
+    def test_server_with_variables(self):
+        """Server with URL variables (spec 3.4)."""
+        variables = {
+            "version": ServerVariable(default="v1", enum=("v1", "v2")),
+            "environment": ServerVariable(default="production"),
+        }
+        server = Server(
+            url="https://{environment}.api.example.com/{version}",
+            variables=variables,
+        )
+        assert len(server.variables) == 2
+        assert server.variables["version"].default == "v1"
+        assert server.variables["environment"].default == "production"
 
 
 class TestApiSpec:
@@ -332,3 +426,18 @@ class TestApiSpec:
         spec = ApiSpec(title="My API", version="1.0.0", schemas=schemas)
         assert "User" in spec.schemas
         assert "Post" in spec.schemas
+
+    def test_spec_with_security_schemes(self):
+        """Spec with security schemes (spec 3.4)."""
+        security_schemes = {
+            "bearerAuth": SecurityScheme(type="http", scheme="bearer"),
+            "apiKey": SecurityScheme(type="apiKey", name="X-API-Key", location="header"),
+        }
+        spec = ApiSpec(
+            title="My API",
+            version="1.0.0",
+            security_schemes=security_schemes,
+        )
+        assert "bearerAuth" in spec.security_schemes
+        assert "apiKey" in spec.security_schemes
+        assert spec.security_schemes["bearerAuth"].scheme == "bearer"

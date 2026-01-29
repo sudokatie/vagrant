@@ -4,21 +4,27 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from pathlib import Path
 
-from textual.app import App, ComposeResult, work
+from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Footer, Header, Input, Static
+from textual.worker import Worker, WorkerState
 
 from vagrant.core.errors import NetworkError, VagrantError
 from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
 from vagrant.parser.models import ApiSpec, Operation
-from vagrant.storage.environments import Environment
+from vagrant.storage.environments import Environment, EnvironmentManager
 from vagrant.storage.history import HistoryEntry, HistoryStorage
 from vagrant.tui.widgets.endpoint_browser import EndpointBrowser, EndpointSelected
 from vagrant.tui.widgets.history_panel import HistoryPanel, HistorySelected
 from vagrant.tui.widgets.request_builder import RequestBuilder, RequestSent
 from vagrant.tui.widgets.response_viewer import ResponseViewer
+
+
+# Load CSS from external file
+CSS_PATH = Path(__file__).parent / "styles.tcss"
 
 
 class VagrantApp(App):
@@ -29,82 +35,14 @@ class VagrantApp(App):
     and history tracking.
     """
 
-    CSS = """
-    #main-container {
-        layout: horizontal;
-    }
-    
-    #left-panel {
-        width: 30%;
-        min-width: 30;
-        border: solid $primary;
-    }
-    
-    #right-panel {
-        width: 50%;
-        border: solid $secondary;
-    }
-    
-    #history-panel {
-        width: 20%;
-        min-width: 20;
-        border: solid $accent;
-    }
-    
-    #search-input {
-        dock: top;
-        margin: 0 1;
-    }
-    
-    #endpoint-browser {
-        height: 1fr;
-    }
-    
-    #request-builder {
-        height: 40%;
-        border-bottom: solid $primary;
-        overflow-y: auto;
-    }
-    
-    #response-viewer {
-        height: 60%;
-        overflow-y: auto;
-    }
-    
-    .panel-title {
-        background: $surface;
-        padding: 0 1;
-        text-style: bold;
-    }
-    
-    .method-get {
-        color: $success;
-    }
-    
-    .method-post {
-        color: $primary;
-    }
-    
-    .method-put {
-        color: $warning;
-    }
-    
-    .method-delete {
-        color: $error;
-    }
-    
-    #status-bar {
-        dock: bottom;
-        height: 1;
-        background: $surface;
-        padding: 0 1;
-    }
-    """
+    CSS_PATH = "styles.tcss"
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("?", "help", "Help"),
-        Binding("r", "reload", "Reload Spec"),
+        Binding("r", "replay", "Replay"),
+        Binding("e", "edit_env", "Edit Env"),
+        Binding("h", "toggle_history", "History"),
         Binding("ctrl+l", "clear_history", "Clear History"),
         Binding("/", "focus_search", "Search"),
         Binding("escape", "clear_search", "Clear Search", show=False),
@@ -128,10 +66,13 @@ class VagrantApp(App):
         self.spec = spec
         self.env = env
         self.selected_operation: Operation | None = None
+        self._last_request: HttpRequest | None = None
+        self._history_visible = True
 
         # Initialize services
         self._http_client = HttpClient()
         self._history = HistoryStorage()
+        self._env_mgr = EnvironmentManager()
 
         # Configure base URL from spec or environment
         if spec.servers:
@@ -184,27 +125,26 @@ class VagrantApp(App):
 
     def on_request_sent(self, event: RequestSent) -> None:
         """Handle request submission from builder."""
+        self._last_request = event.request
         self._execute_request(event.request)
 
-    @work(exclusive=True, thread=True)
-    async def _execute_request(self, request: HttpRequest) -> None:
-        """Execute HTTP request in background.
-        
-        Uses Textual's work decorator for async execution without
-        blocking the UI.
-        """
+    def _execute_request(self, request: HttpRequest) -> None:
+        """Execute HTTP request in background."""
         # Show loading state
         response_viewer = self.query_one("#response-view", ResponseViewer)
-        self.call_from_thread(response_viewer.set_loading)
-        self.call_from_thread(self._set_status, "Sending request...")
+        response_viewer.set_loading()
+        self._set_status("Sending request...")
 
+        # Run async request in worker
+        self.run_worker(self._do_request(request), exclusive=True)
+
+    async def _do_request(self, request: HttpRequest) -> None:
+        """Async request execution."""
         try:
             # Substitute environment variables in URL
             url = request.url
             if self.env:
-                from vagrant.storage.environments import EnvironmentManager
-                mgr = EnvironmentManager()
-                url = mgr.substitute(url, self.env)
+                url = self._env_mgr.substitute(url, self.env)
 
             # Create modified request with substituted URL
             final_request = HttpRequest(
@@ -217,19 +157,22 @@ class VagrantApp(App):
 
             # Send request
             response = await self._http_client.send(final_request)
+            
+            # Store response for {{response.field.path}} substitution
+            self._env_mgr.set_last_response(response.body)
 
-            # Update UI on main thread
-            self.call_from_thread(self._handle_response, final_request, response)
+            # Update UI
+            self._handle_response(final_request, response)
 
         except NetworkError as e:
-            self.call_from_thread(self._handle_error, str(e))
+            self._handle_error(str(e))
         except VagrantError as e:
-            self.call_from_thread(self._handle_error, str(e))
+            self._handle_error(str(e))
         except Exception as e:
-            self.call_from_thread(self._handle_error, f"Unexpected error: {e}")
+            self._handle_error(f"Unexpected error: {e}")
 
     def _handle_response(self, request: HttpRequest, response: HttpResponse) -> None:
-        """Handle successful response on main thread."""
+        """Handle successful response."""
         # Update response viewer
         response_viewer = self.query_one("#response-view", ResponseViewer)
         response_viewer.set_response(response)
@@ -250,24 +193,23 @@ class VagrantApp(App):
         )
 
         entry_id = self._history.add(entry)
-        entry.id = entry_id
 
         # Update history panel
         history_panel = self.query_one("#history-list", HistoryPanel)
-        history_panel.add_entry(entry)
+        history_panel.refresh_entries()
 
         # Update status
-        status_class = "success" if response.is_success else "error"
+        status_style = "success" if response.is_success else "error"
         self._set_status(
-            f"[{status_class}]{response.status_code}[/{status_class}] "
+            f"{response.status_code} "
             f"{request.method} {request.url} ({response.elapsed_ms:.0f}ms)"
         )
 
     def _handle_error(self, error: str) -> None:
-        """Handle request error on main thread."""
+        """Handle request error."""
         response_viewer = self.query_one("#response-view", ResponseViewer)
         response_viewer.set_error(error)
-        self._set_status(f"[error]Error: {error}[/error]")
+        self._set_status(f"Error: {error}")
 
     def on_history_selected(self, event: HistorySelected) -> None:
         """Handle history entry selection."""
@@ -307,15 +249,31 @@ class VagrantApp(App):
     def action_help(self) -> None:
         """Show help."""
         self.notify(
-            "Tab: Navigate | Enter: Select | /: Search | q: Quit",
+            "Tab: Navigate | Enter: Select | /: Search | r: Replay | h: History | q: Quit",
             title="Help",
         )
 
-    def action_reload(self) -> None:
-        """Reload the spec."""
-        browser = self.query_one("#endpoint-browser", EndpointBrowser)
-        browser.clear_filter()
-        self.notify("Spec reloaded")
+    def action_replay(self) -> None:
+        """Replay the last request."""
+        if self._last_request:
+            self._execute_request(self._last_request)
+            self.notify("Replaying last request")
+        else:
+            self.notify("No request to replay", severity="warning")
+
+    def action_edit_env(self) -> None:
+        """Open environment editor."""
+        if self.env:
+            self.notify(f"Environment: {self.env.name}\nEdit in ~/.config/vagrant/environments/")
+        else:
+            self.notify("No environment configured", severity="warning")
+
+    def action_toggle_history(self) -> None:
+        """Toggle history panel visibility."""
+        history_panel = self.query_one("#history-panel")
+        self._history_visible = not self._history_visible
+        history_panel.display = self._history_visible
+        self.notify("History " + ("shown" if self._history_visible else "hidden"))
 
     def action_focus_search(self) -> None:
         """Focus the search input."""
@@ -331,8 +289,9 @@ class VagrantApp(App):
 
     def action_clear_history(self) -> None:
         """Clear all history."""
+        self._history.clear()
         history_panel = self.query_one("#history-list", HistoryPanel)
-        history_panel.clear_history()
+        history_panel.refresh_entries()
         self.notify("History cleared")
 
 

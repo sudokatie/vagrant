@@ -68,7 +68,7 @@ class EnvironmentManager:
     Environments are stored as YAML files in ~/.config/vagrant/environments/
     """
 
-    # Pattern for variable substitution: {{variable}} or {{env.VAR}}
+    # Pattern for variable substitution: {{variable}} or {{env.VAR}} or {{response.path}}
     VAR_PATTERN = re.compile(r"\{\{\s*([^}]+?)\s*\}\}")
 
     def __init__(self, config_dir: Path | None = None) -> None:
@@ -82,6 +82,59 @@ class EnvironmentManager:
 
         self.env_dir = config_dir / "environments"
         self.env_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Store last response for {{response.field.path}} substitution
+        self._last_response: dict[str, Any] | None = None
+    
+    def set_last_response(self, response_body: Any) -> None:
+        """Store the last response body for variable substitution.
+        
+        Args:
+            response_body: The response body (usually a dict or list).
+        """
+        if isinstance(response_body, dict):
+            self._last_response = response_body
+        else:
+            self._last_response = None
+    
+    def _get_response_value(self, path: str) -> str | None:
+        """Get a value from the last response using dot notation.
+        
+        Args:
+            path: Dot-separated path like "data.user.id" or "items.0.name"
+            
+        Returns:
+            The value as a string, or None if not found.
+        """
+        if self._last_response is None:
+            return None
+        
+        parts = path.split(".")
+        current: Any = self._last_response
+        
+        for part in parts:
+            if current is None:
+                return None
+            
+            if isinstance(current, dict):
+                current = current.get(part)
+            elif isinstance(current, list):
+                # Try to parse as integer index
+                try:
+                    index = int(part)
+                    if 0 <= index < len(current):
+                        current = current[index]
+                    else:
+                        return None
+                except ValueError:
+                    return None
+            else:
+                return None
+        
+        # Convert final value to string
+        if current is None:
+            return None
+        return str(current)
 
     def list(self) -> list[str]:
         """List all environment names.
@@ -178,6 +231,7 @@ class EnvironmentManager:
         - {{variable}} - from env.variables
         - {{env.VAR}} - from OS environment variables
         - {{base_url}} - environment's base URL
+        - {{response.field.path}} - from last response body
         
         Args:
             text: Text with {{variable}} placeholders.
@@ -193,6 +247,14 @@ class EnvironmentManager:
             if key.startswith("env."):
                 env_var = key[4:]
                 return os.environ.get(env_var, match.group(0))
+
+            # Check for response.field.path pattern
+            if key.startswith("response."):
+                response_path = key[9:]  # Remove "response." prefix
+                value = self._get_response_value(response_path)
+                if value is not None:
+                    return value
+                return match.group(0)
 
             # Check for base_url
             if key == "base_url":

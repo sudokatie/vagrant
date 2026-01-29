@@ -15,7 +15,9 @@ from vagrant.parser.models import (
     RequestBody,
     Response,
     Schema,
+    SecurityScheme,
     Server,
+    ServerVariable,
 )
 
 
@@ -113,6 +115,9 @@ class OpenAPIParser:
 
         # Component schemas
         schemas = self._parse_component_schemas()
+        
+        # Security schemes
+        security_schemes = self._parse_security_schemes()
 
         return ApiSpec(
             title=title,
@@ -121,13 +126,24 @@ class OpenAPIParser:
             servers=servers,
             operations=operations,
             schemas=schemas,
+            security_schemes=security_schemes,
         )
 
     def _parse_server(self, data: dict[str, Any]) -> Server:
         """Parse a server definition."""
+        variables = {}
+        for name, var_data in data.get("variables", {}).items():
+            if isinstance(var_data, dict):
+                variables[name] = ServerVariable(
+                    default=var_data.get("default", ""),
+                    enum=tuple(var_data.get("enum", [])),
+                    description=var_data.get("description"),
+                )
+        
         return Server(
             url=data.get("url", ""),
             description=data.get("description"),
+            variables=variables,
         )
 
     def _parse_paths(self) -> tuple[Operation, ...]:
@@ -186,6 +202,9 @@ class OpenAPIParser:
             if isinstance(resp_data, dict):
                 responses[str(status)] = self._parse_response(str(status), resp_data)
 
+        # Parse security requirements
+        security = self._parse_security_requirements(data.get("security", []))
+
         return Operation(
             method=method,  # type: ignore
             path=path,
@@ -196,6 +215,7 @@ class OpenAPIParser:
             parameters=all_params,
             request_body=request_body,
             responses=responses,
+            security=security,
             deprecated=data.get("deprecated", False),
         )
 
@@ -315,6 +335,39 @@ class OpenAPIParser:
             name: self._parse_schema(schema_data)
             for name, schema_data in schemas_data.items()
         }
+
+    def _parse_security_schemes(self) -> dict[str, SecurityScheme]:
+        """Parse security schemes from components."""
+        components = self._raw.get("components", {})
+        schemes_data = components.get("securitySchemes", {})
+        
+        schemes = {}
+        for name, data in schemes_data.items():
+            if isinstance(data, dict):
+                schemes[name] = SecurityScheme(
+                    type=data.get("type", ""),
+                    name=data.get("name"),
+                    location=data.get("in"),
+                    scheme=data.get("scheme"),
+                    bearer_format=data.get("bearerFormat"),
+                    description=data.get("description"),
+                )
+        
+        return schemes
+
+    def _parse_security_requirements(
+        self, 
+        requirements: list[dict[str, list[str]]]
+    ) -> tuple[dict[str, tuple[str, ...]], ...]:
+        """Parse security requirements list."""
+        parsed = []
+        for req in requirements:
+            if isinstance(req, dict):
+                parsed_req = {}
+                for scheme, scopes in req.items():
+                    parsed_req[scheme] = tuple(scopes) if isinstance(scopes, list) else ()
+                parsed.append(parsed_req)
+        return tuple(parsed)
 
     def _resolve_ref(self, data: dict[str, Any]) -> dict[str, Any]:
         """Resolve $ref pointer to actual data.

@@ -131,6 +131,42 @@ class Response:
 
 
 @dataclass(frozen=True)
+class ServerVariable:
+    """Server URL variable definition.
+    
+    Attributes:
+        default: Default value for the variable.
+        enum: Allowed values for the variable.
+        description: Human-readable description.
+    """
+    
+    default: str
+    enum: tuple[str, ...] = ()
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class SecurityScheme:
+    """Security scheme definition.
+    
+    Attributes:
+        type: Security type (apiKey, http, oauth2, openIdConnect).
+        name: Name of header, query, or cookie parameter (for apiKey).
+        location: Location of API key (header, query, cookie).
+        scheme: HTTP auth scheme (e.g., bearer, basic).
+        bearer_format: Format hint for bearer tokens (e.g., JWT).
+        description: Human-readable description.
+    """
+    
+    type: str  # apiKey, http, oauth2, openIdConnect
+    name: str | None = None  # for apiKey
+    location: str | None = None  # header, query, cookie (for apiKey)
+    scheme: str | None = None  # for http (bearer, basic)
+    bearer_format: str | None = None  # for http bearer
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class Operation:
     """API operation (endpoint).
     
@@ -147,6 +183,7 @@ class Operation:
         parameters: Parameters for this operation.
         request_body: Request body definition, if any.
         responses: Mapping of status codes to response definitions.
+        security: Security requirements for this operation.
         deprecated: Whether this operation is deprecated.
     """
 
@@ -159,6 +196,7 @@ class Operation:
     parameters: tuple[Parameter, ...] = ()
     request_body: RequestBody | None = None
     responses: dict[str, Response] = field(default_factory=dict)
+    security: tuple[dict[str, tuple[str, ...]], ...] = ()
     deprecated: bool = False
 
     @property
@@ -178,10 +216,12 @@ class Server:
     Attributes:
         url: Base URL for API requests.
         description: Human-readable description.
+        variables: URL template variables.
     """
 
     url: str
     description: str | None = None
+    variables: dict[str, ServerVariable] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -198,6 +238,7 @@ class ApiSpec:
         servers: List of server definitions.
         operations: All API operations.
         schemas: Named schemas from components.
+        security_schemes: Available security schemes.
     """
 
     title: str
@@ -206,6 +247,7 @@ class ApiSpec:
     servers: tuple[Server, ...] = ()
     operations: tuple[Operation, ...] = ()
     schemas: dict[str, Schema] = field(default_factory=dict)
+    security_schemes: dict[str, SecurityScheme] = field(default_factory=dict)
 
     @property
     def base_url(self) -> str | None:

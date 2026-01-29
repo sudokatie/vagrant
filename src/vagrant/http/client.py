@@ -129,10 +129,13 @@ class HttpClient:
         # Build headers
         headers = {**self._default_headers, **request.headers}
 
-        # Apply auth
+        # Build params (copy so auth can modify)
+        params = dict(request.params) if request.params else {}
+
+        # Apply auth (may modify headers and/or params)
         if self._auth:
             auth_handler = get_auth(self._auth)
-            auth_handler.apply(headers)
+            auth_handler.apply(headers, params)
 
         # Prepare body
         content = None
@@ -157,7 +160,7 @@ class HttpClient:
                     method=request.method,
                     url=url,
                     headers=headers,
-                    params=request.params or None,
+                    params=params or None,
                     content=content,
                 )
         except httpx.TimeoutException as e:

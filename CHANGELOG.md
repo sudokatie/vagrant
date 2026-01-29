@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-01-29
+
+### Added
+
+- API key authentication now supports query parameter location (in addition to header)
+- Response variable substitution: `{{response.field.path}}` extracts values from last response
+- Array index support in response paths: `{{response.items.0.name}}`
+- Comprehensive tests for all new features
+
+### Fixed
+
+- History auto-cleanup now runs on CLI startup (per spec 7.2)
+- API key auth correctly handles location parameter for header vs query
+
+### Changed
+
+- Test count increased from 225 to 284
+- Non-TUI code coverage at 87%+
+
 ## [0.1.0] - 2026-01-29
 
 ### Added
@@ -17,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple authentication types: Bearer, Basic, API Key
 - CLI commands for single requests and config management
 - Variable substitution in URLs and headers
-- 225 tests with 85%+ coverage
+- 225 tests
 
 ### Features
 
