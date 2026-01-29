@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from vagrant import __version__
 from vagrant.cli.commands import cli
 
 
@@ -27,7 +28,7 @@ class TestCLIBasics:
         """CLI shows version."""
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert __version__ in result.output
 
 
 class TestExploreCommand:
