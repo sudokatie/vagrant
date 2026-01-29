@@ -5,4 +5,4 @@ browse endpoints interactively, make requests, and understand the API's
 structure through hands-on exploration.
 """
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"

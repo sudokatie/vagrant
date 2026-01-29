@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-01-29
+
+### Added
+
+- **Mark endpoints as visited** (spec 4.3 compliance)
+  - Endpoints show checkmark after a request is sent
+  - `mark_visited()`, `is_visited()`, `get_visited_count()`, `clear_visited()` methods
+  - Visual indicator in endpoint tree
+
+- **Type-aware parameter inputs** (spec 4.3 compliance)
+  - Boolean parameters use Switch widget
+  - Enum parameters use Select dropdown
+  - Date/datetime parameters show format hints (YYYY-MM-DD, ISO 8601)
+  - Number/integer parameters show type hints
+  - Email, UUID, URI formats show hints
+
+- **Auth configuration in Request Builder** (spec 4.3 compliance)
+  - Auth type selector (None, Bearer, Basic, API Key)
+  - Password-masked credentials input
+  - Per-request auth overrides environment auth
+
 ## [0.1.3] - 2026-01-29
 
 ### Added

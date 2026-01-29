@@ -21,6 +21,7 @@ class EndpointBrowser(Tree[Operation]):
     """Tree view of API endpoints.
     
     Displays endpoints grouped by tag, with method badges.
+    Tracks which endpoints have been visited (requests sent).
     Emits EndpointSelected message when an endpoint is clicked.
     """
 
@@ -52,6 +53,10 @@ class EndpointBrowser(Tree[Operation]):
     EndpointBrowser .method-delete {
         color: $error;
     }
+    
+    EndpointBrowser .visited {
+        text-style: dim;
+    }
     """
 
     def __init__(
@@ -70,6 +75,7 @@ class EndpointBrowser(Tree[Operation]):
         super().__init__(spec.title, id=id, classes=classes)
         self.spec = spec
         self._filter_query: str = ""
+        self._visited: set[tuple[str, str]] = set()  # (method, path) tuples
         self._build_tree()
 
     def _build_tree(self) -> None:
@@ -113,8 +119,41 @@ class EndpointBrowser(Tree[Operation]):
             path = path[:37] + "..."
 
         deprecated = " [dim](deprecated)[/dim]" if op.deprecated else ""
+        
+        # Show checkmark for visited endpoints
+        visited = " [dim]✓[/dim]" if self.is_visited(op) else ""
 
-        return f"{method_badge} {path}{deprecated}"
+        return f"{method_badge} {path}{deprecated}{visited}"
+    
+    def mark_visited(self, op: Operation) -> None:
+        """Mark an operation as visited (request was sent).
+        
+        Args:
+            op: Operation that was visited.
+        """
+        self._visited.add((op.method, op.path))
+        # Rebuild tree to update display
+        self._build_tree()
+    
+    def is_visited(self, op: Operation) -> bool:
+        """Check if an operation has been visited.
+        
+        Args:
+            op: Operation to check.
+            
+        Returns:
+            True if the operation has been visited.
+        """
+        return (op.method, op.path) in self._visited
+    
+    def get_visited_count(self) -> int:
+        """Return the number of visited endpoints."""
+        return len(self._visited)
+    
+    def clear_visited(self) -> None:
+        """Clear all visited markers."""
+        self._visited.clear()
+        self._build_tree()
 
     def _matches_filter(self, op: Operation) -> bool:
         """Check if operation matches current filter."""

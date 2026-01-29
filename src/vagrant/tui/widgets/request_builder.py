@@ -8,8 +8,9 @@ from dataclasses import dataclass, field
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Button, Input, Static, TextArea
+from textual.widgets import Button, Input, Select, Static, Switch, TextArea
 
+from vagrant.http.auth import AuthConfig
 from vagrant.http.client import HttpRequest
 from vagrant.parser.models import Operation, Parameter
 
@@ -140,6 +141,27 @@ class RequestBuilder(Widget):
             for param in header_params:
                 container.mount(self._create_param_row(param, "header"))
 
+        # Authentication section (spec 4.3)
+        container.mount(Static("Authentication", classes="section-title"))
+        auth_options = [
+            ("none", "None"),
+            ("bearer", "Bearer Token"),
+            ("basic", "Basic Auth"),
+            ("apikey", "API Key"),
+        ]
+        auth_select = Select(auth_options, id="auth-type", classes="param-input", value="none")
+        auth_row = Horizontal(classes="param-row")
+        auth_row.compose_add_child(Static("Type", classes="param-label"))
+        auth_row.compose_add_child(auth_select)
+        container.mount(auth_row)
+        
+        # Auth value input (token, user:pass, or key)
+        auth_value_row = Horizontal(classes="param-row")
+        auth_value_row.compose_add_child(Static("Credentials", classes="param-label"))
+        auth_input = Input(placeholder="Token, user:pass, or API key", id="auth-value", classes="param-input", password=True)
+        auth_value_row.compose_add_child(auth_input)
+        container.mount(auth_value_row)
+
         # Request body
         if op.request_body:
             container.mount(Static("Request Body", classes="section-title"))
@@ -152,7 +174,15 @@ class RequestBuilder(Widget):
         send_btn.disabled = False
 
     def _create_param_row(self, param: Parameter, location: str) -> Horizontal:
-        """Create input row for a parameter."""
+        """Create input row for a parameter with type-aware widgets.
+        
+        Uses appropriate input widgets based on parameter schema:
+        - Boolean: Switch widget
+        - Enum: Select dropdown
+        - Date/DateTime: Input with format hint
+        - Number/Integer: Input with type hint
+        - Default: Text input
+        """
         required_mark = "[required]*[/required]" if param.required else ""
         label_text = f"{param.name}{required_mark}"
 
@@ -160,9 +190,56 @@ class RequestBuilder(Widget):
         label = Static(label_text, classes="param-label")
 
         input_id = f"param-{location}-{param.name}"
-        placeholder = param.description or f"{param.schema.type}"
-        if param.schema.default is not None:
-            placeholder = f"{placeholder} (default: {param.schema.default})"
+        schema = param.schema
+        
+        # Type-aware input selection (spec 4.3)
+        if schema.type == "boolean":
+            # Boolean: use Switch widget
+            switch = Switch(id=input_id, classes="param-input")
+            self._param_inputs[input_id] = switch
+            row.compose_add_child(label)
+            row.compose_add_child(switch)
+            return row
+        
+        elif schema.enum:
+            # Enum: use Select dropdown
+            options = [(str(v), str(v)) for v in schema.enum]
+            if not param.required:
+                options = [("", "(none)")] + options
+            select = Select(options, id=input_id, classes="param-input")
+            self._param_inputs[input_id] = select
+            row.compose_add_child(label)
+            row.compose_add_child(select)
+            return row
+        
+        # Default: Input widget with type-aware placeholder
+        placeholder = param.description or ""
+        
+        # Add type-specific hints
+        if schema.type == "integer":
+            type_hint = "integer"
+        elif schema.type == "number":
+            type_hint = "number"
+        elif schema.format == "date":
+            type_hint = "YYYY-MM-DD"
+        elif schema.format == "date-time":
+            type_hint = "ISO 8601 datetime"
+        elif schema.format == "email":
+            type_hint = "email"
+        elif schema.format == "uuid":
+            type_hint = "UUID"
+        elif schema.format == "uri":
+            type_hint = "URL"
+        else:
+            type_hint = schema.type
+        
+        if placeholder:
+            placeholder = f"{placeholder} ({type_hint})"
+        else:
+            placeholder = type_hint
+            
+        if schema.default is not None:
+            placeholder = f"{placeholder} [default: {schema.default}]"
 
         input_widget = Input(placeholder=placeholder, id=input_id, classes="param-input")
         self._param_inputs[input_id] = input_widget
@@ -183,17 +260,27 @@ class RequestBuilder(Widget):
 
         op = self._operation
 
-        # Collect parameter values
+        # Collect parameter values from type-aware widgets
         path_params: dict[str, str] = {}
         query_params: dict[str, str] = {}
         headers: dict[str, str] = {}
 
         for param in op.parameters:
             input_id = f"param-{param.location}-{param.name}"
-            input_widget = self._param_inputs.get(input_id)
+            widget = self._param_inputs.get(input_id)
 
-            if input_widget:
-                value = input_widget.value.strip()
+            if widget:
+                # Get value based on widget type
+                if isinstance(widget, Switch):
+                    # Boolean switch - always has a value
+                    value = "true" if widget.value else "false"
+                elif isinstance(widget, Select):
+                    # Select dropdown
+                    value = str(widget.value) if widget.value else ""
+                else:
+                    # Input widget
+                    value = widget.value.strip() if hasattr(widget, 'value') else ""
+                
                 if value:
                     if param.location == "path":
                         path_params[param.name] = value
@@ -225,6 +312,38 @@ class RequestBuilder(Widget):
             params=query_params,
             body=body,
         )
+
+    def get_auth(self) -> AuthConfig | None:
+        """Get authentication config from form.
+        
+        Returns:
+            AuthConfig if auth is configured, None otherwise.
+        """
+        try:
+            auth_type_select = self.query_one("#auth-type", Select)
+            auth_value_input = self.query_one("#auth-value", Input)
+            
+            auth_type = str(auth_type_select.value) if auth_type_select.value else "none"
+            auth_value = auth_value_input.value.strip() if auth_value_input.value else ""
+            
+            if auth_type == "none" or not auth_value:
+                return None
+            
+            if auth_type == "bearer":
+                return AuthConfig(type="bearer", credentials={"token": auth_value})
+            elif auth_type == "basic":
+                # Expect user:pass format
+                if ":" in auth_value:
+                    user, password = auth_value.split(":", 1)
+                else:
+                    user, password = auth_value, ""
+                return AuthConfig(type="basic", credentials={"username": user, "password": password})
+            elif auth_type == "apikey":
+                return AuthConfig(type="apikey", credentials={"key": auth_value})
+            
+            return None
+        except Exception:
+            return None
 
     def clear(self) -> None:
         """Clear all form fields."""

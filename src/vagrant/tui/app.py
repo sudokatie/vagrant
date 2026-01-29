@@ -155,6 +155,16 @@ class VagrantApp(App):
                 body=request.body,
             )
 
+            # Check for request-level auth from builder (spec 4.3)
+            request_builder = self.query_one("#request-form", RequestBuilder)
+            request_auth = request_builder.get_auth()
+            if request_auth:
+                # Apply request-specific auth (overrides env auth for this request)
+                self._http_client.set_auth(request_auth)
+            elif self.env and self.env.auth:
+                # Restore env auth
+                self._http_client.set_auth(self.env.auth)
+
             # Send request
             response = await self._http_client.send(final_request)
             
@@ -197,6 +207,11 @@ class VagrantApp(App):
         # Update history panel
         history_panel = self.query_one("#history-list", HistoryPanel)
         history_panel.refresh_entries()
+
+        # Mark endpoint as visited (spec 4.3)
+        if self.selected_operation:
+            endpoint_browser = self.query_one("#endpoint-browser", EndpointBrowser)
+            endpoint_browser.mark_visited(self.selected_operation)
 
         # Update status
         status_style = "success" if response.is_success else "error"
