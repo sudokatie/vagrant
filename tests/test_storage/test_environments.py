@@ -1,11 +1,11 @@
 """Tests for environment management."""
 
-import os
-import pytest
 from pathlib import Path
 
-from vagrant.storage.environments import Environment, EnvironmentManager
+import pytest
+
 from vagrant.http.auth import AuthConfig
+from vagrant.storage.environments import Environment, EnvironmentManager
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ class TestEnvironmentManagerList:
         manager.save(Environment(name="zebra"))
         manager.save(Environment(name="alpha"))
         manager.save(Environment(name="beta"))
-        
+
         envs = manager.list()
         assert envs == ["alpha", "beta", "zebra"]
 
@@ -123,7 +123,7 @@ class TestEnvironmentManagerSaveGet:
         """get() retrieves saved environment."""
         manager.save(sample_env)
         retrieved = manager.get("production")
-        
+
         assert retrieved.name == "production"
         assert retrieved.base_url == sample_env.base_url
 
@@ -131,7 +131,7 @@ class TestEnvironmentManagerSaveGet:
         """get() preserves auth config."""
         manager.save(sample_env)
         retrieved = manager.get("production")
-        
+
         assert retrieved.auth is not None
         assert retrieved.auth.type == "bearer"
 
@@ -139,7 +139,7 @@ class TestEnvironmentManagerSaveGet:
         """get() preserves variables."""
         manager.save(sample_env)
         retrieved = manager.get("production")
-        
+
         assert retrieved.variables == sample_env.variables
 
     def test_get_nonexistent(self, manager: EnvironmentManager):
@@ -155,7 +155,7 @@ class TestEnvironmentManagerDelete:
         """delete() removes environment file."""
         manager.save(sample_env)
         manager.delete("production")
-        
+
         assert not (manager.env_dir / "production.yaml").exists()
         assert "production" not in manager.list()
 
@@ -247,7 +247,7 @@ class TestEnvironmentManagerSubstituteAll:
             "static": "no substitution",
         }
         result = manager.substitute_all(data, env)
-        
+
         assert result["url"] == "https://example.com/api"
         assert result["token"] == "secret"
         assert result["static"] == "no substitution"
@@ -264,7 +264,7 @@ class TestEnvironmentManagerSubstituteAll:
             },
         }
         result = manager.substitute_all(data, env)
-        
+
         assert result["headers"]["Authorization"] == "Bearer abc123"
 
     def test_substitute_all_non_strings(self, manager: EnvironmentManager):
@@ -276,7 +276,7 @@ class TestEnvironmentManagerSubstituteAll:
             "items": [1, 2, 3],
         }
         result = manager.substitute_all(data, env)
-        
+
         assert result["count"] == 42
         assert result["enabled"] is True
         assert result["items"] == [1, 2, 3]

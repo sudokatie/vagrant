@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Static, ListView, ListItem, Label
+from textual.widgets import Label, ListItem, ListView, Static
 
-from vagrant.storage.history import HistoryStorage, HistoryEntry
+from vagrant.storage.history import HistoryEntry, HistoryStorage
 
 
 class HistorySelected(Message):
@@ -107,14 +107,14 @@ class HistoryPanel(Widget):
             limit: Maximum number of entries to show.
         """
         self._entries = self._storage.list(limit=limit)
-        
+
         list_view = self.query_one("#history-list", ListView)
         list_view.clear()
-        
+
         if not self._entries:
             list_view.append(ListItem(Label("[empty-message]No history yet[/empty-message]")))
             return
-        
+
         for entry in self._entries:
             item = self._create_list_item(entry)
             list_view.append(item)
@@ -123,22 +123,22 @@ class HistoryPanel(Widget):
         """Create list item for a history entry."""
         method_class = f"method-{entry.method.lower()}"
         status_class = "status-success" if 200 <= entry.status_code < 300 else "status-error"
-        
+
         # Truncate URL if too long
         url = entry.url
         if len(url) > 40:
             url = url[:37] + "..."
-        
+
         # Format time
         time_str = entry.timestamp.strftime("%H:%M")
-        
+
         label_text = (
             f"[{method_class}]{entry.method:6}[/{method_class}] "
             f"{url} "
             f"[{status_class}]{entry.status_code}[/{status_class}] "
             f"[dim]{time_str}[/dim]"
         )
-        
+
         item = ListItem(Label(label_text, classes="history-item"))
         item.data = entry  # Store entry reference
         return item
@@ -168,17 +168,17 @@ class HistoryPanel(Widget):
             entry: Entry to add.
         """
         self._entries.insert(0, entry)
-        
+
         list_view = self.query_one("#history-list", ListView)
-        
+
         # Remove empty message if present
         if list_view.children and not hasattr(list_view.children[0], "data"):
             list_view.clear()
-        
+
         # Insert at top
         item = self._create_list_item(entry)
         list_view.insert(0, item)
-        
+
         # Keep list size reasonable
         while len(list_view.children) > 50:
             list_view.children[-1].remove()
@@ -193,17 +193,17 @@ class HistoryPanel(Widget):
         if not query:
             self.refresh_list()
             return
-        
+
         results = self._storage.search(query)
         self._entries = results[:20]
-        
+
         list_view = self.query_one("#history-list", ListView)
         list_view.clear()
-        
+
         if not self._entries:
             list_view.append(ListItem(Label("[empty-message]No matches found[/empty-message]")))
             return
-        
+
         for entry in self._entries:
             item = self._create_list_item(entry)
             list_view.append(item)
@@ -212,7 +212,7 @@ class HistoryPanel(Widget):
         """Clear all history."""
         self._storage.clear()
         self._entries.clear()
-        
+
         list_view = self.query_one("#history-list", ListView)
         list_view.clear()
         list_view.append(ListItem(Label("[empty-message]No history yet[/empty-message]")))

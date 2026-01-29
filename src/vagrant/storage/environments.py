@@ -45,7 +45,7 @@ class Environment:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Environment":
+    def from_dict(cls, data: dict[str, Any]) -> Environment:
         """Create from dictionary."""
         auth = None
         if "auth" in data and data["auth"]:
@@ -53,7 +53,7 @@ class Environment:
                 type=data["auth"].get("type", "bearer"),
                 credentials=data["auth"].get("credentials", {}),
             )
-        
+
         return cls(
             name=data.get("name", ""),
             base_url=data.get("base_url", ""),
@@ -79,7 +79,7 @@ class EnvironmentManager:
         """
         if config_dir is None:
             config_dir = get_config_dir()
-        
+
         self.env_dir = config_dir / "environments"
         self.env_dir.mkdir(parents=True, exist_ok=True)
 
@@ -112,20 +112,20 @@ class EnvironmentManager:
         # Try .yaml first, then .yml
         yaml_path = self.env_dir / f"{name}.yaml"
         yml_path = self.env_dir / f"{name}.yml"
-        
+
         if yaml_path.exists():
             path = yaml_path
         elif yml_path.exists():
             path = yml_path
         else:
             raise FileNotFoundError(f"Environment not found: {name}")
-        
+
         with open(path) as f:
             data = yaml.safe_load(f) or {}
-        
+
         # Ensure name is set
         data["name"] = name
-        
+
         return Environment.from_dict(data)
 
     def save(self, env: Environment) -> None:
@@ -135,7 +135,7 @@ class EnvironmentManager:
             env: Environment to save.
         """
         path = self.env_dir / f"{env.name}.yaml"
-        
+
         with open(path, "w") as f:
             yaml.safe_dump(env.to_dict(), f, default_flow_style=False)
 
@@ -150,7 +150,7 @@ class EnvironmentManager:
         """
         yaml_path = self.env_dir / f"{name}.yaml"
         yml_path = self.env_dir / f"{name}.yml"
-        
+
         if yaml_path.exists():
             yaml_path.unlink()
         elif yml_path.exists():
@@ -188,23 +188,23 @@ class EnvironmentManager:
         """
         def replace(match: re.Match) -> str:
             key = match.group(1).strip()
-            
+
             # Check for env.VAR pattern
             if key.startswith("env."):
                 env_var = key[4:]
                 return os.environ.get(env_var, match.group(0))
-            
+
             # Check for base_url
             if key == "base_url":
                 return env.base_url
-            
+
             # Check environment variables
             if key in env.variables:
                 return env.variables[key]
-            
+
             # Return original if not found
             return match.group(0)
-        
+
         return self.VAR_PATTERN.sub(replace, text)
 
     def substitute_all(

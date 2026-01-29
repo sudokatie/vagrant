@@ -5,27 +5,26 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from pathlib import Path
-from typing import Any
 
 import click
 from rich.console import Console
-from rich.table import Table
 from rich.syntax import Syntax
+from rich.table import Table
 
 from vagrant import __version__
-from vagrant.core.config import load_config, get_config_value, set_config_value
+from vagrant.core.config import get_config_value, load_config, set_config_value
 from vagrant.core.errors import VagrantError
-from vagrant.http.client import HttpClient, HttpRequest
 from vagrant.http.auth import AuthConfig
+from vagrant.http.client import HttpClient, HttpRequest
 from vagrant.parser.openapi import parse_spec
-from vagrant.storage.history import HistoryStorage, HistoryEntry
-from vagrant.storage.environments import EnvironmentManager, Environment
+from vagrant.storage.environments import Environment, EnvironmentManager
+from vagrant.storage.history import HistoryEntry, HistoryStorage
 
 console = Console()
 
 
 import functools
+
 
 def handle_errors(func):
     """Decorator to handle VagrantError exceptions."""
@@ -69,12 +68,12 @@ def explore(ctx: click.Context, spec_or_url: str, env: str | None, base_url: str
     """
     # Parse the spec
     spec = parse_spec(spec_or_url)
-    
+
     console.print(f"[bold]{spec.title}[/bold] v{spec.version}")
     if spec.description:
         console.print(f"[dim]{spec.description}[/dim]")
     console.print()
-    
+
     # Show server info
     if spec.servers:
         console.print("[bold]Servers:[/bold]")
@@ -82,11 +81,11 @@ def explore(ctx: click.Context, spec_or_url: str, env: str | None, base_url: str
             desc = f" - {server.description}" if server.description else ""
             console.print(f"  {server.url}{desc}")
         console.print()
-    
+
     # Show operations summary
     console.print(f"[bold]Operations:[/bold] {len(spec.operations)} endpoints")
     console.print()
-    
+
     # Group by tags
     tags: dict[str, list] = {}
     for op in spec.operations:
@@ -94,7 +93,7 @@ def explore(ctx: click.Context, spec_or_url: str, env: str | None, base_url: str
         if tag not in tags:
             tags[tag] = []
         tags[tag].append(op)
-    
+
     for tag, ops in sorted(tags.items()):
         console.print(f"[bold cyan]{tag}[/bold cyan]")
         for op in ops:
@@ -107,7 +106,7 @@ def explore(ctx: click.Context, spec_or_url: str, env: str | None, base_url: str
             }
             color = method_colors.get(op.method, "white")
             console.print(f"  [{color}]{op.method:7}[/{color}] {op.path}")
-    
+
     console.print()
     console.print("[dim]TUI explorer coming soon. Use 'vagrant request' for now.[/dim]")
 
@@ -136,7 +135,7 @@ def request_cmd(
     URL is the full URL or path (if base_url is set in environment).
     """
     config = load_config()
-    
+
     # Load environment if specified
     env = None
     env_mgr = EnvironmentManager()
@@ -144,13 +143,13 @@ def request_cmd(
         env = env_mgr.get(env_name)
     elif config.default_environment and env_mgr.exists(config.default_environment):
         env = env_mgr.get(config.default_environment)
-    
+
     # Build client
     client = HttpClient(
         timeout=config.timeout,
         verify_ssl=config.verify_ssl,
     )
-    
+
     # Apply environment settings
     if env:
         if env.base_url:
@@ -158,14 +157,14 @@ def request_cmd(
         if env.auth:
             client.set_auth(env.auth)
         url = env_mgr.substitute(url, env)
-    
+
     # Parse headers
     parsed_headers: dict[str, str] = {}
     for h in headers:
         if ":" in h:
             key, value = h.split(":", 1)
             parsed_headers[key.strip()] = value.strip()
-    
+
     # Parse body
     body = None
     if data:
@@ -173,7 +172,7 @@ def request_cmd(
             body = json.loads(data)
         except json.JSONDecodeError:
             body = data  # Use as raw string
-    
+
     # Build request
     req = HttpRequest(
         method=method.upper(),  # type: ignore
@@ -181,13 +180,13 @@ def request_cmd(
         headers=parsed_headers,
         body=body,
     )
-    
+
     # Execute
     async def do_request():
         return await client.send(req)
-    
+
     response = asyncio.run(do_request())
-    
+
     # Display response
     status_color = "green" if response.is_success else "red"
     console.print(
@@ -195,14 +194,14 @@ def request_cmd(
         f"[dim]({response.elapsed_ms:.0f}ms, {response.size_bytes} bytes)[/dim]"
     )
     console.print()
-    
+
     # Display headers if verbose
     if ctx.obj.get("verbose"):
         console.print("[bold]Response Headers:[/bold]")
         for key, value in response.headers.items():
             console.print(f"  {key}: {value}")
         console.print()
-    
+
     # Display body
     if response.body:
         if isinstance(response.body, (dict, list)):
@@ -211,7 +210,7 @@ def request_cmd(
             console.print(syntax)
         else:
             console.print(response.body)
-    
+
     # Save to history
     if not no_history:
         from datetime import datetime
@@ -239,16 +238,16 @@ def request_cmd(
 def history(limit: int, search: str | None) -> None:
     """Show request history."""
     storage = HistoryStorage()
-    
+
     if search:
         entries = storage.search(search)[:limit]
     else:
         entries = storage.list(limit=limit)
-    
+
     if not entries:
         console.print("[dim]No history entries found.[/dim]")
         return
-    
+
     table = Table(title=f"Request History (last {len(entries)})")
     table.add_column("ID", style="dim")
     table.add_column("Time", style="dim")
@@ -256,7 +255,7 @@ def history(limit: int, search: str | None) -> None:
     table.add_column("URL")
     table.add_column("Status")
     table.add_column("Time")
-    
+
     method_colors = {
         "GET": "green",
         "POST": "blue",
@@ -264,16 +263,16 @@ def history(limit: int, search: str | None) -> None:
         "PATCH": "yellow",
         "DELETE": "red",
     }
-    
+
     for entry in entries:
         color = method_colors.get(entry.method, "white")
         status_color = "green" if 200 <= entry.status_code < 300 else "red"
-        
+
         # Truncate URL if too long
         url = entry.url
         if len(url) > 50:
             url = url[:47] + "..."
-        
+
         table.add_row(
             str(entry.id),
             entry.timestamp.strftime("%H:%M:%S"),
@@ -282,7 +281,7 @@ def history(limit: int, search: str | None) -> None:
             f"[{status_color}]{entry.status_code}[/{status_color}]",
             f"{entry.elapsed_ms:.0f}ms",
         )
-    
+
     console.print(table)
 
 
@@ -297,14 +296,14 @@ def env_list() -> None:
     """List all environments."""
     manager = EnvironmentManager()
     envs = manager.list()
-    
+
     if not envs:
         console.print("[dim]No environments configured.[/dim]")
         console.print("[dim]Create one with: vagrant env create <name>[/dim]")
         return
-    
+
     config = load_config()
-    
+
     console.print("[bold]Environments:[/bold]")
     for name in envs:
         env = manager.get(name)
@@ -323,11 +322,11 @@ def env_list() -> None:
 def env_create(name: str, base_url: str | None, auth_type: str | None, token: str | None) -> None:
     """Create a new environment."""
     manager = EnvironmentManager()
-    
+
     if manager.exists(name):
         console.print(f"[red]Environment '{name}' already exists.[/red]")
         sys.exit(1)
-    
+
     auth = None
     if auth_type and token:
         if auth_type == "bearer":
@@ -337,7 +336,7 @@ def env_create(name: str, base_url: str | None, auth_type: str | None, token: st
         elif auth_type == "basic":
             # Expect token as user:pass
             auth = AuthConfig(type="basic", credentials={"username": token.split(":")[0], "password": token.split(":")[-1]})
-    
+
     env = Environment(
         name=name,
         base_url=base_url or "",
@@ -365,16 +364,16 @@ def env_show(name: str) -> None:
     """Show environment details."""
     manager = EnvironmentManager()
     env = manager.get(name)
-    
+
     console.print(f"[bold]Environment: {env.name}[/bold]")
     console.print()
-    
+
     if env.base_url:
         console.print(f"[bold]Base URL:[/bold] {env.base_url}")
-    
+
     if env.auth:
         console.print(f"[bold]Auth Type:[/bold] {env.auth.type}")
-    
+
     if env.variables:
         console.print("[bold]Variables:[/bold]")
         for key, value in env.variables.items():

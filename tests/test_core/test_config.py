@@ -1,15 +1,16 @@
 """Tests for configuration management."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from vagrant.core.config import (
     Config,
     get_config_dir,
     get_config_path,
+    get_config_value,
     load_config,
     save_config,
-    get_config_value,
     set_config_value,
 )
 from vagrant.core.errors import ConfigError

@@ -1,6 +1,6 @@
 """Configuration management for Vagrant."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -82,10 +82,10 @@ def load_config() -> Config:
         ConfigError: If config file exists but cannot be parsed.
     """
     config_path = get_config_path()
-    
+
     if not config_path.exists():
         return Config()
-    
+
     try:
         with open(config_path) as f:
             data = yaml.safe_load(f) or {}
@@ -93,10 +93,10 @@ def load_config() -> Config:
         raise ConfigError(f"Invalid YAML in config file: {e}")
     except OSError as e:
         raise ConfigError(f"Cannot read config file: {e}")
-    
+
     if not isinstance(data, dict):
         raise ConfigError("Config file must be a YAML mapping")
-    
+
     return Config.from_dict(data)
 
 
@@ -109,7 +109,7 @@ def save_config(config: Config) -> None:
         ConfigError: If config cannot be written.
     """
     config_path = get_config_path()
-    
+
     try:
         with open(config_path, "w") as f:
             yaml.safe_dump(config.to_dict(), f, default_flow_style=False)
@@ -124,10 +124,10 @@ def get_config_value(key: str) -> Any:
         ConfigError: If key is not a valid config key.
     """
     config = load_config()
-    
+
     if not hasattr(config, key):
         raise ConfigError(f"Unknown config key: {key}", config_key=key)
-    
+
     return getattr(config, key)
 
 
@@ -138,10 +138,10 @@ def set_config_value(key: str, value: Any) -> None:
         ConfigError: If key is not a valid config key.
     """
     config = load_config()
-    
+
     if not hasattr(config, key):
         raise ConfigError(f"Unknown config key: {key}", config_key=key)
-    
+
     # Type coercion for common cases
     current = getattr(config, key)
     if isinstance(current, bool) and isinstance(value, str):
@@ -151,6 +151,6 @@ def set_config_value(key: str, value: Any) -> None:
             value = int(value)
         except ValueError:
             raise ConfigError(f"Invalid integer value: {value}", config_key=key)
-    
+
     setattr(config, key, value)
     save_config(config)

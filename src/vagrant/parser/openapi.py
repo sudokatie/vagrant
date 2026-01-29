@@ -48,15 +48,15 @@ class OpenAPIParser:
         """
         path = Path(path)
         self._file_path = str(path)
-        
+
         if not path.exists():
             raise SpecParseError(f"File not found: {path}", file_path=str(path))
-        
+
         try:
             content = path.read_text()
         except OSError as e:
             raise SpecParseError(f"Cannot read file: {e}", file_path=str(path))
-        
+
         # Detect format from extension or content
         if path.suffix in (".json",) or content.strip().startswith("{"):
             return self.parse_string(content, format="json")
@@ -81,10 +81,10 @@ class OpenAPIParser:
             self._raw = yaml.safe_load(content)
         except yaml.YAMLError as e:
             raise SpecParseError(f"Invalid {format.upper()}: {e}")
-        
+
         if not isinstance(self._raw, dict):
             raise SpecParseError("Spec must be a YAML/JSON object")
-        
+
         return self._parse_spec()
 
     def _parse_spec(self) -> ApiSpec:
@@ -93,27 +93,27 @@ class OpenAPIParser:
         info = self._raw.get("info", {})
         title = info.get("title")
         version = info.get("version")
-        
+
         if not title:
             raise SpecParseError("Missing required field: info.title")
         if not version:
             raise SpecParseError("Missing required field: info.version")
-        
+
         # Optional fields
         description = info.get("description")
-        
+
         # Servers
         servers = tuple(
             self._parse_server(s)
             for s in self._raw.get("servers", [])
         )
-        
+
         # Operations from paths
         operations = self._parse_paths()
-        
+
         # Component schemas
         schemas = self._parse_component_schemas()
-        
+
         return ApiSpec(
             title=title,
             version=version,
@@ -134,30 +134,30 @@ class OpenAPIParser:
         """Parse all paths and operations."""
         operations: list[Operation] = []
         paths = self._raw.get("paths", {})
-        
+
         for path, path_item in paths.items():
             if not isinstance(path_item, dict):
                 continue
-            
+
             # Collect path-level parameters
             path_params = tuple(
                 self._parse_parameter(p)
                 for p in path_item.get("parameters", [])
             )
-            
+
             # Parse each HTTP method
             for method in ("get", "post", "put", "patch", "delete", "options", "head"):
                 if method not in path_item:
                     continue
-                
+
                 op_data = path_item[method]
                 if not isinstance(op_data, dict):
                     continue
-                
+
                 operations.append(
                     self._parse_operation(method.upper(), path, op_data, path_params)
                 )
-        
+
         return tuple(operations)
 
     def _parse_operation(
@@ -174,18 +174,18 @@ class OpenAPIParser:
             for p in data.get("parameters", [])
         )
         all_params = path_params + op_params
-        
+
         # Parse request body
         request_body = None
         if "requestBody" in data:
             request_body = self._parse_request_body(data["requestBody"])
-        
+
         # Parse responses
         responses = {}
         for status, resp_data in data.get("responses", {}).items():
             if isinstance(resp_data, dict):
                 responses[str(status)] = self._parse_response(str(status), resp_data)
-        
+
         return Operation(
             method=method,  # type: ignore
             path=path,
@@ -203,7 +203,7 @@ class OpenAPIParser:
         """Parse a parameter definition."""
         # Handle $ref
         data = self._resolve_ref(data)
-        
+
         return Parameter(
             name=data.get("name", ""),
             location=data.get("in", "query"),  # type: ignore
@@ -216,9 +216,9 @@ class OpenAPIParser:
     def _parse_request_body(self, data: dict[str, Any]) -> RequestBody:
         """Parse a request body definition."""
         data = self._resolve_ref(data)
-        
+
         content = data.get("content", {})
-        
+
         # Prefer application/json, fall back to first content type
         if "application/json" in content:
             content_type = "application/json"
@@ -229,7 +229,7 @@ class OpenAPIParser:
         else:
             content_type = "application/json"
             media = {}
-        
+
         return RequestBody(
             content_type=content_type,
             schema=self._parse_schema(media.get("schema", {})),
@@ -240,11 +240,11 @@ class OpenAPIParser:
     def _parse_response(self, status_code: str, data: dict[str, Any]) -> Response:
         """Parse a response definition."""
         data = self._resolve_ref(data)
-        
+
         content = data.get("content", {})
         schema = None
         content_type = "application/json"
-        
+
         if "application/json" in content:
             media = content["application/json"]
             schema = self._parse_schema(media.get("schema", {}))
@@ -253,7 +253,7 @@ class OpenAPIParser:
             media = content[content_type]
             if "schema" in media:
                 schema = self._parse_schema(media["schema"])
-        
+
         return Response(
             status_code=status_code,
             description=data.get("description", ""),
@@ -265,17 +265,17 @@ class OpenAPIParser:
         """Parse a schema definition."""
         if not data:
             return Schema()
-        
+
         data = self._resolve_ref(data)
-        
+
         # Handle allOf, oneOf, anyOf by taking first item
         for combo in ("allOf", "oneOf", "anyOf"):
             if combo in data and data[combo]:
                 data = self._resolve_ref(data[combo][0])
                 break
-        
+
         schema_type = data.get("type", "string")
-        
+
         # Parse properties for objects
         properties = None
         if "properties" in data:
@@ -283,17 +283,17 @@ class OpenAPIParser:
                 name: self._parse_schema(prop_data)
                 for name, prop_data in data["properties"].items()
             }
-        
+
         # Parse items for arrays
         items = None
         if "items" in data:
             items = self._parse_schema(data["items"])
-        
+
         # Parse enum
         enum = None
         if "enum" in data:
             enum = tuple(data["enum"])
-        
+
         return Schema(
             type=schema_type,
             format=data.get("format"),
@@ -310,7 +310,7 @@ class OpenAPIParser:
         """Parse component schemas."""
         components = self._raw.get("components", {})
         schemas_data = components.get("schemas", {})
-        
+
         return {
             name: self._parse_schema(schema_data)
             for name, schema_data in schemas_data.items()
@@ -323,16 +323,16 @@ class OpenAPIParser:
         """
         if not isinstance(data, dict) or "$ref" not in data:
             return data
-        
+
         ref = data["$ref"]
         if not ref.startswith("#/"):
             # External refs not supported yet
             return data
-        
+
         # Navigate to referenced data
         parts = ref[2:].split("/")
         current = self._raw
-        
+
         for part in parts:
             # Handle JSON pointer escaping
             part = part.replace("~1", "/").replace("~0", "~")
@@ -341,7 +341,7 @@ class OpenAPIParser:
             else:
                 # Reference not found, return empty
                 return {}
-        
+
         return current if isinstance(current, dict) else {}
 
 

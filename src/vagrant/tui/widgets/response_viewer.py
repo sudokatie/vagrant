@@ -6,7 +6,7 @@ import json
 
 from textual.containers import Vertical
 from textual.widget import Widget
-from textual.widgets import Static, Tree
+from textual.widgets import Static
 
 from vagrant.http.client import HttpResponse
 
@@ -91,15 +91,15 @@ class ResponseViewer(Widget):
             response: HTTP response to display.
         """
         self._response = response
-        
+
         # Hide placeholder
         placeholder = self.query_one("#placeholder", Static)
         placeholder.display = False
-        
+
         # Build response display
         container = self.query_one("#response-container", Vertical)
         container.remove_children()
-        
+
         # Status line
         status_class = self._get_status_class(response.status_code)
         status_line = (
@@ -107,7 +107,7 @@ class ResponseViewer(Widget):
             f"[meta]({response.elapsed_ms:.0f}ms, {self._format_size(response.size_bytes)})[/meta]"
         )
         container.mount(Static(status_line, id="status-line"))
-        
+
         # Headers (collapsible)
         if response.headers:
             container.mount(Static("Headers", classes="headers-title"))
@@ -118,7 +118,7 @@ class ResponseViewer(Widget):
             if len(response.headers) > 10:
                 headers_text += f"\n  [meta]... and {len(response.headers) - 10} more[/meta]"
             container.mount(Static(headers_text, id="headers-content"))
-        
+
         # Body
         container.mount(Static("Body", classes="body-title"))
         body_content = self._format_body(response.body)
@@ -146,7 +146,7 @@ class ResponseViewer(Widget):
         """Format response body for display."""
         if body is None:
             return "[meta](empty)[/meta]"
-        
+
         if isinstance(body, (dict, list)):
             try:
                 formatted = json.dumps(body, indent=2)
@@ -158,7 +158,7 @@ class ResponseViewer(Widget):
                 return formatted
             except (TypeError, ValueError):
                 return str(body)
-        
+
         # String body
         text = str(body)
         if len(text) > 5000:
@@ -168,10 +168,10 @@ class ResponseViewer(Widget):
     def clear(self) -> None:
         """Clear the response display."""
         self._response = None
-        
+
         placeholder = self.query_one("#placeholder", Static)
         placeholder.display = True
-        
+
         container = self.query_one("#response-container", Vertical)
         container.remove_children()
 
@@ -186,7 +186,7 @@ class ResponseViewer(Widget):
         placeholder = self.query_one("#placeholder", Static)
         placeholder.update("[dim]Sending request...[/dim]")
         placeholder.display = True
-        
+
         container = self.query_one("#response-container", Vertical)
         container.remove_children()
 
@@ -199,7 +199,7 @@ class ResponseViewer(Widget):
         placeholder = self.query_one("#placeholder", Static)
         placeholder.update(f"[status-error]Error: {error}[/status-error]")
         placeholder.display = True
-        
+
         container = self.query_one("#response-container", Vertical)
         container.remove_children()
 
@@ -212,7 +212,7 @@ class ResponseViewer(Widget):
         """Return the body content for copying."""
         if not self._response:
             return None
-        
+
         body = self._response.body
         if isinstance(body, (dict, list)):
             return json.dumps(body, indent=2)

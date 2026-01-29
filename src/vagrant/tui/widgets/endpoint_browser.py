@@ -76,7 +76,7 @@ class EndpointBrowser(Tree[Operation]):
         """Build the endpoint tree from spec."""
         self.clear()
         self.root.expand()
-        
+
         # Group operations by tag
         tags: dict[str, list[Operation]] = {}
         for op in self.spec.operations:
@@ -84,7 +84,7 @@ class EndpointBrowser(Tree[Operation]):
             if tag not in tags:
                 tags[tag] = []
             tags[tag].append(op)
-        
+
         # Build tree structure
         for tag, ops in sorted(tags.items()):
             # Filter if query is set
@@ -95,10 +95,10 @@ class EndpointBrowser(Tree[Operation]):
                 ]
                 if not ops:
                     continue
-            
+
             tag_node = self.root.add(f"[bold]{tag}[/bold]")
             tag_node.expand()
-            
+
             for op in ops:
                 label = self._format_operation(op)
                 tag_node.add_leaf(label, data=op)
@@ -107,19 +107,19 @@ class EndpointBrowser(Tree[Operation]):
         """Format operation for display."""
         method_class = f"method-{op.method.lower()}"
         method_badge = f"[{method_class}]{op.method:7}[/{method_class}]"
-        
+
         path = op.path
         if len(path) > 40:
             path = path[:37] + "..."
-        
+
         deprecated = " [dim](deprecated)[/dim]" if op.deprecated else ""
-        
+
         return f"{method_badge} {path}{deprecated}"
 
     def _matches_filter(self, op: Operation) -> bool:
         """Check if operation matches current filter."""
         query = self._filter_query.lower()
-        
+
         # Match against method, path, summary, operation_id
         if query in op.method.lower():
             return True
@@ -129,7 +129,7 @@ class EndpointBrowser(Tree[Operation]):
             return True
         if op.operation_id and query in op.operation_id.lower():
             return True
-        
+
         return False
 
     def filter(self, query: str) -> None:
@@ -158,7 +158,7 @@ class EndpointBrowser(Tree[Operation]):
         """Handle node selection."""
         if event.node.data is None:
             return
-        
+
         op = event.node.data
         if isinstance(op, Operation):
             self.post_message(EndpointSelected(op))
@@ -186,7 +186,7 @@ class EndpointBrowser(Tree[Operation]):
                 if result:
                     return result
             return None
-        
+
         target = find_node(self.root)
         if target:
             self.select_node(target)

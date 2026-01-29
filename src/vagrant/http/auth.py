@@ -11,7 +11,7 @@ from vagrant.core.types import AuthType
 
 class AuthHandler(Protocol):
     """Protocol for auth handlers."""
-    
+
     def apply(self, headers: dict[str, str]) -> None:
         """Apply authentication to request headers."""
         ...

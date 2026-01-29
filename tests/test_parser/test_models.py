@@ -3,13 +3,13 @@
 import pytest
 
 from vagrant.parser.models import (
-    Schema,
+    ApiSpec,
+    Operation,
     Parameter,
     RequestBody,
     Response,
-    Operation,
+    Schema,
     Server,
-    ApiSpec,
 )
 
 

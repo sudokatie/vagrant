@@ -125,15 +125,15 @@ class HttpClient:
         url = request.url
         if self.base_url and not url.startswith(("http://", "https://")):
             url = f"{self.base_url}/{url.lstrip('/')}"
-        
+
         # Build headers
         headers = {**self._default_headers, **request.headers}
-        
+
         # Apply auth
         if self._auth:
             auth_handler = get_auth(self._auth)
             auth_handler.apply(headers)
-        
+
         # Prepare body
         content = None
         if request.body is not None:
@@ -144,10 +144,10 @@ class HttpClient:
                 content = request.body
             else:
                 content = str(request.body)
-        
+
         # Execute request
         start_time = time.monotonic()
-        
+
         try:
             async with httpx.AsyncClient(
                 timeout=self.timeout,
@@ -166,16 +166,16 @@ class HttpClient:
             raise NetworkError(f"Connection failed: {e}", url=url)
         except httpx.RequestError as e:
             raise NetworkError(f"Request failed: {e}", url=url)
-        
+
         elapsed_ms = (time.monotonic() - start_time) * 1000
-        
+
         # Parse response body
         body: Any
         try:
             body = response.json()
         except (json.JSONDecodeError, ValueError):
             body = response.text
-        
+
         return HttpResponse(
             status_code=response.status_code,
             status_text=response.reason_phrase or "",

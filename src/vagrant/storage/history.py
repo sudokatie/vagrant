@@ -7,7 +7,6 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from vagrant.core.config import get_config_dir
 
@@ -59,7 +58,7 @@ class HistoryStorage:
         """
         if db_path is None:
             db_path = get_config_dir() / "history.db"
-        
+
         self.db_path = db_path
         self._init_db()
 
@@ -142,10 +141,10 @@ class HistoryStorage:
                 (entry_id,),
             )
             row = cursor.fetchone()
-            
+
             if row is None:
                 return None
-            
+
             return self._row_to_entry(row)
 
     def list(
@@ -215,12 +214,12 @@ class HistoryStorage:
             # Count current entries
             cursor = conn.execute("SELECT COUNT(*) FROM requests")
             count = cursor.fetchone()[0]
-            
+
             if count <= max_entries:
                 return 0
-            
+
             to_delete = count - max_entries
-            
+
             # Delete oldest entries
             conn.execute(
                 """
@@ -232,7 +231,7 @@ class HistoryStorage:
                 """,
                 (to_delete,),
             )
-            
+
             return to_delete
 
     def count(self) -> int:

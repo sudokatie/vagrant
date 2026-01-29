@@ -4,9 +4,9 @@ import pytest
 import respx
 from httpx import Response
 
-from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
-from vagrant.http.auth import AuthConfig
 from vagrant.core.errors import NetworkError
+from vagrant.http.auth import AuthConfig
+from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
 
 
 class TestHttpRequest:
@@ -92,12 +92,12 @@ class TestHttpClientAuth:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, json={"ok": True})
         )
-        
+
         client = HttpClient()
         client.set_auth(AuthConfig(type="bearer", credentials={"token": "secret"}))
-        
+
         resp = await client.get("https://api.example.com/test")
-        
+
         assert resp.status_code == 200
         # Check that auth header was sent
         request = respx.calls.last.request
@@ -113,10 +113,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/users").mock(
             return_value=Response(200, json=[{"id": 1, "name": "Test"}])
         )
-        
+
         client = HttpClient()
         resp = await client.get("https://api.example.com/users")
-        
+
         assert resp.status_code == 200
         assert resp.body == [{"id": 1, "name": "Test"}]
 
@@ -126,13 +126,13 @@ class TestHttpClientRequests:
         respx.post("https://api.example.com/users").mock(
             return_value=Response(201, json={"id": 2, "name": "New User"})
         )
-        
+
         client = HttpClient()
         resp = await client.post(
             "https://api.example.com/users",
             body={"name": "New User"},
         )
-        
+
         assert resp.status_code == 201
         assert resp.body["id"] == 2
 
@@ -142,13 +142,13 @@ class TestHttpClientRequests:
         respx.put("https://api.example.com/users/1").mock(
             return_value=Response(200, json={"id": 1, "name": "Updated"})
         )
-        
+
         client = HttpClient()
         resp = await client.put(
             "https://api.example.com/users/1",
             body={"name": "Updated"},
         )
-        
+
         assert resp.status_code == 200
 
     @respx.mock
@@ -157,10 +157,10 @@ class TestHttpClientRequests:
         respx.delete("https://api.example.com/users/1").mock(
             return_value=Response(204)
         )
-        
+
         client = HttpClient()
         resp = await client.delete("https://api.example.com/users/1")
-        
+
         assert resp.status_code == 204
 
     @respx.mock
@@ -169,10 +169,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/users").mock(
             return_value=Response(200, json=[])
         )
-        
+
         client = HttpClient()
         await client.get("https://api.example.com/users", params={"page": "2"})
-        
+
         request = respx.calls.last.request
         assert "page=2" in str(request.url)
 
@@ -182,13 +182,13 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, json={})
         )
-        
+
         client = HttpClient()
         await client.get(
             "https://api.example.com/test",
             headers={"X-Custom": "value"},
         )
-        
+
         request = respx.calls.last.request
         assert request.headers["X-Custom"] == "value"
 
@@ -198,10 +198,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/v1/users").mock(
             return_value=Response(200, json=[])
         )
-        
+
         client = HttpClient(base_url="https://api.example.com/v1")
         await client.get("/users")
-        
+
         request = respx.calls.last.request
         assert str(request.url) == "https://api.example.com/v1/users"
 
@@ -211,10 +211,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, json={})
         )
-        
+
         client = HttpClient()
         resp = await client.get("https://api.example.com/test")
-        
+
         assert resp.elapsed_ms >= 0
 
     @respx.mock
@@ -223,10 +223,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, json={"data": "value"})
         )
-        
+
         client = HttpClient()
         resp = await client.get("https://api.example.com/test")
-        
+
         assert resp.size_bytes > 0
 
     @respx.mock
@@ -235,10 +235,10 @@ class TestHttpClientRequests:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, text="Hello, World!")
         )
-        
+
         client = HttpClient()
         resp = await client.get("https://api.example.com/test")
-        
+
         assert resp.body == "Hello, World!"
 
 
@@ -252,11 +252,11 @@ class TestHttpClientErrors:
         respx.get("https://api.example.com/test").mock(
             side_effect=httpx.ConnectError("Connection refused")
         )
-        
+
         client = HttpClient()
         with pytest.raises(NetworkError) as exc_info:
             await client.get("https://api.example.com/test")
-        
+
         assert "Connection failed" in str(exc_info.value)
 
     @respx.mock
@@ -266,11 +266,11 @@ class TestHttpClientErrors:
         respx.get("https://api.example.com/test").mock(
             side_effect=httpx.TimeoutException("Timeout")
         )
-        
+
         client = HttpClient()
         with pytest.raises(NetworkError) as exc_info:
             await client.get("https://api.example.com/test")
-        
+
         assert "timed out" in str(exc_info.value).lower()
 
 
@@ -283,11 +283,11 @@ class TestHttpClientSend:
         respx.get("https://api.example.com/test").mock(
             return_value=Response(200, json={"ok": True})
         )
-        
+
         client = HttpClient()
         request = HttpRequest(method="GET", url="https://api.example.com/test")
         resp = await client.send(request)
-        
+
         assert resp.status_code == 200
         assert resp.body == {"ok": True}
 
@@ -297,7 +297,7 @@ class TestHttpClientSend:
         respx.post("https://api.example.com/test").mock(
             return_value=Response(200, json={})
         )
-        
+
         client = HttpClient()
         request = HttpRequest(
             method="POST",
@@ -305,7 +305,7 @@ class TestHttpClientSend:
             body={"key": "value"},
         )
         await client.send(request)
-        
+
         req = respx.calls.last.request
         assert req.headers["Content-Type"] == "application/json"
 
@@ -315,7 +315,7 @@ class TestHttpClientSend:
         respx.post("https://api.example.com/test").mock(
             return_value=Response(200, json={})
         )
-        
+
         client = HttpClient()
         request = HttpRequest(
             method="POST",
@@ -323,6 +323,6 @@ class TestHttpClientSend:
             body="raw string data",
         )
         await client.send(request)
-        
+
         req = respx.calls.last.request
         assert req.content == b"raw string data"

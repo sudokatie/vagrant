@@ -4,23 +4,23 @@ from vagrant.core.config import (
     Config,
     get_config_dir,
     get_config_path,
+    get_config_value,
     load_config,
     save_config,
-    get_config_value,
     set_config_value,
 )
 from vagrant.core.errors import (
-    VagrantError,
-    SpecParseError,
-    NetworkError,
     AuthError,
     ConfigError,
+    NetworkError,
+    SpecParseError,
+    VagrantError,
 )
 from vagrant.core.types import (
-    HttpMethod,
-    ParamLocation,
     AuthType,
+    HttpMethod,
     OutputFormat,
+    ParamLocation,
     Theme,
 )
 

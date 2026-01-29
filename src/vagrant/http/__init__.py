@@ -1,7 +1,7 @@
 """HTTP client module for making API requests."""
 
+from vagrant.http.auth import ApiKeyAuth, AuthConfig, BasicAuth, BearerAuth, get_auth
 from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
-from vagrant.http.auth import AuthConfig, BearerAuth, BasicAuth, ApiKeyAuth, get_auth
 
 __all__ = [
     "HttpClient",

@@ -6,7 +6,7 @@ All models are frozen (immutable) dataclasses for safety and hashability.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 
 from vagrant.core.types import HttpMethod, ParamLocation
 
@@ -32,8 +32,8 @@ class Schema:
 
     type: str = "string"
     format: str | None = None
-    properties: dict[str, "Schema"] | None = None
-    items: "Schema | None" = None
+    properties: dict[str, Schema] | None = None
+    items: Schema | None = None
     required: tuple[str, ...] = ()
     enum: tuple[Any, ...] | None = None
     default: Any = None
@@ -41,36 +41,36 @@ class Schema:
     nullable: bool = False
 
     @classmethod
-    def string(cls, format: str | None = None) -> "Schema":
+    def string(cls, format: str | None = None) -> Schema:
         """Create a string schema."""
         return cls(type="string", format=format)
 
     @classmethod
-    def integer(cls, format: str | None = None) -> "Schema":
+    def integer(cls, format: str | None = None) -> Schema:
         """Create an integer schema."""
         return cls(type="integer", format=format)
 
     @classmethod
-    def number(cls, format: str | None = None) -> "Schema":
+    def number(cls, format: str | None = None) -> Schema:
         """Create a number schema."""
         return cls(type="number", format=format)
 
     @classmethod
-    def boolean(cls) -> "Schema":
+    def boolean(cls) -> Schema:
         """Create a boolean schema."""
         return cls(type="boolean")
 
     @classmethod
-    def array(cls, items: "Schema") -> "Schema":
+    def array(cls, items: Schema) -> Schema:
         """Create an array schema with given item type."""
         return cls(type="array", items=items)
 
     @classmethod
     def object(
         cls,
-        properties: dict[str, "Schema"] | None = None,
+        properties: dict[str, Schema] | None = None,
         required: tuple[str, ...] = (),
-    ) -> "Schema":
+    ) -> Schema:
         """Create an object schema."""
         return cls(type="object", properties=properties, required=required)
 

@@ -52,13 +52,13 @@ class SpecParseError(VagrantError):
         """
         self.file_path = file_path
         self.line = line
-        
+
         details = None
         if file_path:
             details = f"in {file_path}"
             if line:
                 details += f" at line {line}"
-        
+
         super().__init__(message, details)
 
 
@@ -84,13 +84,13 @@ class NetworkError(VagrantError):
         """
         self.url = url
         self.status_code = status_code
-        
+
         details = None
         if url:
             details = f"url={url}"
             if status_code:
                 details += f", status={status_code}"
-        
+
         super().__init__(message, details)
 
 
@@ -113,7 +113,7 @@ class AuthError(VagrantError):
             auth_type: Type of authentication that failed.
         """
         self.auth_type = auth_type
-        
+
         details = f"auth_type={auth_type}" if auth_type else None
         super().__init__(message, details)
 
@@ -136,6 +136,6 @@ class ConfigError(VagrantError):
             config_key: Configuration key that caused the error.
         """
         self.config_key = config_key
-        
+
         details = f"key={config_key}" if config_key else None
         super().__init__(message, details)

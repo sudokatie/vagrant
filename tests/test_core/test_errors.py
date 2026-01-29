@@ -3,11 +3,11 @@
 import pytest
 
 from vagrant.core.errors import (
-    VagrantError,
-    SpecParseError,
-    NetworkError,
     AuthError,
     ConfigError,
+    NetworkError,
+    SpecParseError,
+    VagrantError,
 )
 
 
@@ -153,7 +153,7 @@ class TestErrorHierarchy:
             AuthError("test"),
             ConfigError("test"),
         ]
-        
+
         for err in errors:
             try:
                 raise err

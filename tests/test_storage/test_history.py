@@ -1,8 +1,9 @@
 """Tests for history storage."""
 
-import pytest
 from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 from vagrant.storage.history import HistoryEntry, HistoryStorage
 
@@ -99,7 +100,7 @@ class TestHistoryStorageGet:
         """get() retrieves existing entry."""
         entry_id = storage.add(sample_entry)
         retrieved = storage.get(entry_id)
-        
+
         assert retrieved is not None
         assert retrieved.id == entry_id
         assert retrieved.method == sample_entry.method
@@ -114,7 +115,7 @@ class TestHistoryStorageGet:
         """get() preserves all entry data."""
         entry_id = storage.add(sample_entry)
         retrieved = storage.get(entry_id)
-        
+
         assert retrieved.timestamp == sample_entry.timestamp
         assert retrieved.headers == sample_entry.headers
         assert retrieved.params == sample_entry.params
@@ -163,10 +164,10 @@ class TestHistoryStorageList:
             response_body="",
             elapsed_ms=0.0,
         )
-        
+
         storage.add(older)
         storage.add(newer)
-        
+
         entries = storage.list()
         assert entries[0].url.endswith("/newer")
 
@@ -174,7 +175,7 @@ class TestHistoryStorageList:
         """list() respects limit."""
         for _ in range(10):
             storage.add(sample_entry)
-        
+
         entries = storage.list(limit=5)
         assert len(entries) == 5
 
@@ -182,10 +183,10 @@ class TestHistoryStorageList:
         """list() respects offset."""
         for _ in range(10):
             storage.add(sample_entry)
-        
+
         all_entries = storage.list(limit=10)
         offset_entries = storage.list(limit=10, offset=5)
-        
+
         assert len(offset_entries) == 5
         assert offset_entries[0].id == all_entries[5].id
 
@@ -208,7 +209,7 @@ class TestHistoryStorageSearch:
             elapsed_ms=0.0,
         )
         storage.add(entry)
-        
+
         results = storage.search("users")
         assert len(results) == 1
         assert "users" in results[0].url
@@ -228,7 +229,7 @@ class TestHistoryStorageSearch:
             elapsed_ms=0.0,
         )
         storage.add(entry)
-        
+
         results = storage.search("POST")
         assert len(results) == 1
 
@@ -246,9 +247,9 @@ class TestHistoryStorageClear:
         """clear() removes all entries."""
         storage.add(sample_entry)
         storage.add(sample_entry)
-        
+
         storage.clear()
-        
+
         assert storage.count() == 0
 
 
@@ -259,9 +260,9 @@ class TestHistoryStorageCleanup:
         """cleanup() removes oldest entries."""
         for _ in range(10):
             storage.add(sample_entry)
-        
+
         deleted = storage.cleanup(max_entries=5)
-        
+
         assert deleted == 5
         assert storage.count() == 5
 
@@ -269,9 +270,9 @@ class TestHistoryStorageCleanup:
         """cleanup() does nothing when under limit."""
         for _ in range(5):
             storage.add(sample_entry)
-        
+
         deleted = storage.cleanup(max_entries=10)
-        
+
         assert deleted == 0
         assert storage.count() == 5
 

@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
-from textual.containers import Vertical, Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Static, Input, Button, TextArea
+from textual.widgets import Button, Input, Static, TextArea
 
-from vagrant.parser.models import Operation, Parameter
 from vagrant.http.client import HttpRequest
+from vagrant.parser.models import Operation, Parameter
 
 
 class RequestSent(Message):
@@ -108,45 +108,45 @@ class RequestBuilder(Widget):
         self._operation = op
         self._form_data = FormData()
         self._param_inputs.clear()
-        
+
         # Update header
         header = self.query_one("#operation-header", Static)
         header.update(f"[bold]{op.method}[/bold] {op.path}")
-        
+
         # Rebuild params container
         container = self.query_one("#params-container", Vertical)
         container.remove_children()
-        
+
         # Group parameters by location
         path_params = [p for p in op.parameters if p.location == "path"]
         query_params = [p for p in op.parameters if p.location == "query"]
         header_params = [p for p in op.parameters if p.location == "header"]
-        
+
         # Path parameters
         if path_params:
             container.mount(Static("Path Parameters", classes="section-title"))
             for param in path_params:
                 container.mount(self._create_param_row(param, "path"))
-        
+
         # Query parameters
         if query_params:
             container.mount(Static("Query Parameters", classes="section-title"))
             for param in query_params:
                 container.mount(self._create_param_row(param, "query"))
-        
+
         # Header parameters
         if header_params:
             container.mount(Static("Headers", classes="section-title"))
             for param in header_params:
                 container.mount(self._create_param_row(param, "header"))
-        
+
         # Request body
         if op.request_body:
             container.mount(Static("Request Body", classes="section-title"))
             body_area = TextArea(id="body-area")
             body_area.text = "{}"
             container.mount(body_area)
-        
+
         # Enable send button
         send_btn = self.query_one("#send-button", Button)
         send_btn.disabled = False
@@ -155,21 +155,21 @@ class RequestBuilder(Widget):
         """Create input row for a parameter."""
         required_mark = "[required]*[/required]" if param.required else ""
         label_text = f"{param.name}{required_mark}"
-        
+
         row = Horizontal(classes="param-row")
         label = Static(label_text, classes="param-label")
-        
+
         input_id = f"param-{location}-{param.name}"
         placeholder = param.description or f"{param.schema.type}"
         if param.schema.default is not None:
             placeholder = f"{placeholder} (default: {param.schema.default})"
-        
+
         input_widget = Input(placeholder=placeholder, id=input_id, classes="param-input")
         self._param_inputs[input_id] = input_widget
-        
+
         row.compose_add_child(label)
         row.compose_add_child(input_widget)
-        
+
         return row
 
     def get_request(self) -> HttpRequest | None:
@@ -180,18 +180,18 @@ class RequestBuilder(Widget):
         """
         if not self._operation:
             return None
-        
+
         op = self._operation
-        
+
         # Collect parameter values
         path_params: dict[str, str] = {}
         query_params: dict[str, str] = {}
         headers: dict[str, str] = {}
-        
+
         for param in op.parameters:
             input_id = f"param-{param.location}-{param.name}"
             input_widget = self._param_inputs.get(input_id)
-            
+
             if input_widget:
                 value = input_widget.value.strip()
                 if value:
@@ -201,12 +201,12 @@ class RequestBuilder(Widget):
                         query_params[param.name] = value
                     elif param.location == "header":
                         headers[param.name] = value
-        
+
         # Build URL with path params
         url = op.path
         for name, value in path_params.items():
             url = url.replace(f"{{{name}}}", value)
-        
+
         # Get body
         body = None
         if op.request_body:
@@ -217,7 +217,7 @@ class RequestBuilder(Widget):
                     body = json.loads(body_text)
             except (json.JSONDecodeError, Exception):
                 body = None
-        
+
         return HttpRequest(
             method=op.method,
             url=url,
@@ -231,13 +231,13 @@ class RequestBuilder(Widget):
         self._operation = None
         self._form_data = FormData()
         self._param_inputs.clear()
-        
+
         header = self.query_one("#operation-header", Static)
         header.update("Select an endpoint")
-        
+
         container = self.query_one("#params-container", Vertical)
         container.remove_children()
-        
+
         send_btn = self.query_one("#send-button", Button)
         send_btn.disabled = True
 

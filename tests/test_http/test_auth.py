@@ -1,13 +1,12 @@
 """Tests for authentication handlers."""
 
 import base64
-import pytest
 
 from vagrant.http.auth import (
-    AuthConfig,
-    BearerAuth,
-    BasicAuth,
     ApiKeyAuth,
+    AuthConfig,
+    BasicAuth,
+    BearerAuth,
     get_auth,
 )
 
@@ -38,7 +37,7 @@ class TestBasicAuth:
         auth = BasicAuth("user", "pass")
         headers = {}
         auth.apply(headers)
-        
+
         # Decode and verify
         assert headers["Authorization"].startswith("Basic ")
         encoded = headers["Authorization"].split(" ")[1]
@@ -50,7 +49,7 @@ class TestBasicAuth:
         auth = BasicAuth("user@example.com", "p@ss:word!")
         headers = {}
         auth.apply(headers)
-        
+
         encoded = headers["Authorization"].split(" ")[1]
         decoded = base64.b64decode(encoded).decode()
         assert decoded == "user@example.com:p@ss:word!"
@@ -82,7 +81,7 @@ class TestGetAuth:
         """get_auth creates BearerAuth."""
         config = AuthConfig(type="bearer", credentials={"token": "test-token"})
         auth = get_auth(config)
-        
+
         headers = {}
         auth.apply(headers)
         assert "Bearer test-token" in headers["Authorization"]
@@ -94,7 +93,7 @@ class TestGetAuth:
             credentials={"username": "user", "password": "pass"},
         )
         auth = get_auth(config)
-        
+
         headers = {}
         auth.apply(headers)
         assert headers["Authorization"].startswith("Basic ")
@@ -103,7 +102,7 @@ class TestGetAuth:
         """get_auth creates ApiKeyAuth."""
         config = AuthConfig(type="apikey", credentials={"key": "my-key"})
         auth = get_auth(config)
-        
+
         headers = {}
         auth.apply(headers)
         assert headers["X-API-Key"] == "my-key"
@@ -115,7 +114,7 @@ class TestGetAuth:
             credentials={"key": "my-key", "header": "Authorization"},
         )
         auth = get_auth(config)
-        
+
         headers = {}
         auth.apply(headers)
         assert headers["Authorization"] == "my-key"
@@ -124,7 +123,7 @@ class TestGetAuth:
         """get_auth handles missing credentials gracefully."""
         config = AuthConfig(type="bearer", credentials={})
         auth = get_auth(config)
-        
+
         headers = {}
         auth.apply(headers)
         # Should work but with empty token

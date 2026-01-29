@@ -2,12 +2,12 @@
 
 from vagrant.parser.models import (
     ApiSpec,
-    Server,
     Operation,
     Parameter,
     RequestBody,
     Response,
     Schema,
+    Server,
 )
 from vagrant.parser.openapi import OpenAPIParser, parse_spec
 

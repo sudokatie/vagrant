@@ -1,8 +1,8 @@
 """Tests for CLI commands."""
 
-import json
-import pytest
 from pathlib import Path
+
+import pytest
 from click.testing import CliRunner
 
 from vagrant.cli.commands import cli
@@ -85,10 +85,10 @@ class _MockHistoryStorage:
     """Mock history storage for tests."""
     def __init__(self, entries):
         self._entries = entries
-    
+
     def list(self, limit=50):
         return self._entries[:limit]
-    
+
     def search(self, query):
         return self._entries
 
@@ -174,21 +174,21 @@ class _MockEnvManager:
         self._envs = {}
         self.env_dir = tmp_path / "environments"
         self.env_dir.mkdir(exist_ok=True)
-    
+
     def list(self):
         return list(self._envs.keys())
-    
+
     def exists(self, name):
         return name in self._envs
-    
+
     def get(self, name):
         if name not in self._envs:
             raise FileNotFoundError(f"Environment not found: {name}")
         return self._envs[name]
-    
+
     def save(self, env):
         self._envs[env.name] = env
-    
+
     def delete(self, name):
         if name not in self._envs:
             raise FileNotFoundError(f"Environment not found: {name}")
@@ -200,7 +200,7 @@ class _MockConfig:
     default_environment = ""
     timeout = 30
     verify_ssl = True
-    
+
     def to_dict(self):
         return {
             "default_environment": self.default_environment,
