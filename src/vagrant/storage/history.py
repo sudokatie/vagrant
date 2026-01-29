@@ -3,12 +3,54 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from vagrant.core.config import get_config_dir
+
+
+# Headers that contain sensitive data and should be redacted
+SENSITIVE_HEADERS = {
+    "authorization",
+    "x-api-key",
+    "api-key",
+    "apikey",
+    "x-auth-token",
+    "x-access-token",
+    "cookie",
+    "set-cookie",
+}
+
+# Pattern to detect headers that might contain secrets
+SECRET_PATTERN = re.compile(r"(secret|token|password|key|auth)", re.IGNORECASE)
+
+REDACTED = "[REDACTED]"
+
+
+def redact_headers(headers: dict[str, str]) -> dict[str, str]:
+    """Redact sensitive values from headers before storing in history.
+    
+    Redacts:
+    - Known sensitive headers (Authorization, X-API-Key, etc.)
+    - Any header whose name matches secret/token/password/key/auth
+    
+    Args:
+        headers: Original headers dict.
+        
+    Returns:
+        New dict with sensitive values replaced with [REDACTED].
+    """
+    redacted = {}
+    for key, value in headers.items():
+        key_lower = key.lower()
+        if key_lower in SENSITIVE_HEADERS or SECRET_PATTERN.search(key):
+            redacted[key] = REDACTED
+        else:
+            redacted[key] = value
+    return redacted
 
 
 @dataclass

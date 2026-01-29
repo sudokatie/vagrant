@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from vagrant.storage.history import HistoryEntry, HistoryStorage
+from vagrant.storage.history import HistoryEntry, HistoryStorage, redact_headers, REDACTED
 
 
 @pytest.fixture
@@ -36,6 +36,115 @@ def sample_entry() -> HistoryEntry:
         elapsed_ms=50.5,
         environment="production",
     )
+
+
+class TestRedactHeaders:
+    """Tests for redact_headers function (spec 6.3 - secrets not in history)."""
+
+    def test_redact_authorization_header(self):
+        """Authorization header is redacted."""
+        headers = {"Authorization": "Bearer secret-token-123"}
+        result = redact_headers(headers)
+        assert result["Authorization"] == REDACTED
+
+    def test_redact_basic_auth(self):
+        """Basic auth Authorization header is redacted."""
+        headers = {"Authorization": "Basic dXNlcjpwYXNz"}
+        result = redact_headers(headers)
+        assert result["Authorization"] == REDACTED
+
+    def test_redact_api_key_header(self):
+        """X-API-Key header is redacted."""
+        headers = {"X-API-Key": "my-secret-key"}
+        result = redact_headers(headers)
+        assert result["X-API-Key"] == REDACTED
+
+    def test_redact_various_api_key_names(self):
+        """Various API key header names are redacted."""
+        headers = {
+            "api-key": "key1",
+            "apikey": "key2",
+            "API-KEY": "key3",
+        }
+        result = redact_headers(headers)
+        assert result["api-key"] == REDACTED
+        assert result["apikey"] == REDACTED
+        assert result["API-KEY"] == REDACTED
+
+    def test_redact_token_headers(self):
+        """Headers containing 'token' are redacted."""
+        headers = {
+            "X-Auth-Token": "token123",
+            "X-Access-Token": "access456",
+        }
+        result = redact_headers(headers)
+        assert result["X-Auth-Token"] == REDACTED
+        assert result["X-Access-Token"] == REDACTED
+
+    def test_redact_cookie_headers(self):
+        """Cookie headers are redacted."""
+        headers = {
+            "Cookie": "session=abc123",
+            "Set-Cookie": "session=abc123; Path=/",
+        }
+        result = redact_headers(headers)
+        assert result["Cookie"] == REDACTED
+        assert result["Set-Cookie"] == REDACTED
+
+    def test_redact_secret_pattern_match(self):
+        """Headers matching secret pattern are redacted."""
+        headers = {
+            "X-Secret-Key": "value1",
+            "My-Password-Header": "value2",
+            "Custom-Auth-Header": "value3",
+        }
+        result = redact_headers(headers)
+        assert result["X-Secret-Key"] == REDACTED
+        assert result["My-Password-Header"] == REDACTED
+        assert result["Custom-Auth-Header"] == REDACTED
+
+    def test_preserve_non_sensitive_headers(self):
+        """Non-sensitive headers are preserved."""
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Vagrant/0.1.0",
+            "X-Request-ID": "abc123",
+        }
+        result = redact_headers(headers)
+        assert result["Accept"] == "application/json"
+        assert result["Content-Type"] == "application/json"
+        assert result["User-Agent"] == "Vagrant/0.1.0"
+        assert result["X-Request-ID"] == "abc123"
+
+    def test_mixed_headers(self):
+        """Mix of sensitive and non-sensitive headers."""
+        headers = {
+            "Accept": "application/json",
+            "Authorization": "Bearer token123",
+            "Content-Type": "application/json",
+            "X-API-Key": "secret-key",
+        }
+        result = redact_headers(headers)
+        assert result["Accept"] == "application/json"
+        assert result["Authorization"] == REDACTED
+        assert result["Content-Type"] == "application/json"
+        assert result["X-API-Key"] == REDACTED
+
+    def test_empty_headers(self):
+        """Empty headers dict returns empty dict."""
+        result = redact_headers({})
+        assert result == {}
+
+    def test_case_insensitive_matching(self):
+        """Header matching is case-insensitive."""
+        headers = {
+            "AUTHORIZATION": "Bearer token",
+            "x-api-key": "key",
+        }
+        result = redact_headers(headers)
+        assert result["AUTHORIZATION"] == REDACTED
+        assert result["x-api-key"] == REDACTED
 
 
 class TestHistoryEntry:

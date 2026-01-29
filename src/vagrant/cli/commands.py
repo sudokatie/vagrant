@@ -21,7 +21,7 @@ from vagrant.http.auth import AuthConfig
 from vagrant.http.client import HttpClient, HttpRequest
 from vagrant.parser.openapi import parse_spec
 from vagrant.storage.environments import Environment, EnvironmentManager
-from vagrant.storage.history import HistoryEntry, HistoryStorage
+from vagrant.storage.history import HistoryEntry, HistoryStorage, redact_headers
 
 console = Console()
 quiet_mode = False
@@ -394,7 +394,7 @@ def request_cmd(
             else:
                 output_print(response.body)
 
-    # Save to history
+    # Save to history (redact sensitive headers per spec 6.3)
     if not no_history:
         from datetime import datetime
         storage = HistoryStorage()
@@ -403,7 +403,7 @@ def request_cmd(
             timestamp=datetime.now(),
             method=method.upper(),
             url=url,
-            headers=headers,
+            headers=redact_headers(headers),
             params={},
             body=data,
             status_code=response.status_code,

@@ -16,7 +16,7 @@ from vagrant.core.errors import NetworkError, VagrantError
 from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
 from vagrant.parser.models import ApiSpec, Operation
 from vagrant.storage.environments import Environment, EnvironmentManager
-from vagrant.storage.history import HistoryEntry, HistoryStorage
+from vagrant.storage.history import HistoryEntry, HistoryStorage, redact_headers
 from vagrant.tui.widgets.endpoint_browser import EndpointBrowser, EndpointSelected
 from vagrant.tui.widgets.history_panel import HistoryPanel, HistorySelected
 from vagrant.tui.widgets.request_builder import RequestBuilder, RequestSent
@@ -177,13 +177,13 @@ class VagrantApp(App):
         response_viewer = self.query_one("#response-view", ResponseViewer)
         response_viewer.set_response(response)
 
-        # Add to history
+        # Add to history (redact sensitive headers per spec 6.3)
         entry = HistoryEntry(
             id=None,
             timestamp=datetime.now(),
             method=request.method,
             url=request.url,
-            headers=request.headers,
+            headers=redact_headers(request.headers),
             params=request.params,
             body=json.dumps(request.body) if request.body else None,
             status_code=response.status_code,
