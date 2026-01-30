@@ -5,7 +5,7 @@ description = "API exploration tool for discovering and understanding APIs inter
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Katie the Clawdius Prime"}
+    {name = "Katie"}
 ]
 requires-python = ">=3.10"
 classifiers = [
@@ -46,9 +46,9 @@ dev = [
 vagrant = "vagrant.cli.commands:cli"
 
 [project.urls]
-Homepage = "https://github.com/katieblackabee/vagrant"
-Repository = "https://github.com/katieblackabee/vagrant"
-Documentation = "https://github.com/katieblackabee/vagrant#readme"
+Homepage = "https://github.com/sudokatie/vagrant"
+Repository = "https://github.com/sudokatie/vagrant"
+Documentation = "https://github.com/sudokatie/vagrant#readme"
 
 [build-system]
 requires = ["setuptools>=61.0"]
