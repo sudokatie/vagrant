@@ -11,7 +11,6 @@ from pathlib import Path
 
 from vagrant.core.config import get_config_dir
 
-
 # Headers that contain sensitive data and should be redacted
 SENSITIVE_HEADERS = {
     "authorization",

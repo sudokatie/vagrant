@@ -1,7 +1,6 @@
 """Tests for mock server."""
 
 import pytest
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from vagrant.mock.server import MockServer, RequestLog
 from vagrant.parser.models import (
@@ -131,7 +130,7 @@ class TestMockServer:
         """Generate mock string values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         assert server._generate_string(Schema.string()) == "string"
         assert server._generate_string(Schema.string(format="email")) == "user@example.com"
         assert server._generate_string(Schema.string(format="date")) == "2024-01-15"
@@ -141,7 +140,7 @@ class TestMockServer:
         """Generate mock integer values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         assert server._generate_integer(Schema.integer()) == 0
         assert server._generate_integer(Schema.integer(format="int32")) == 42
 
@@ -149,7 +148,7 @@ class TestMockServer:
         """Generate mock number values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         assert server._generate_number(Schema.number()) == 0.0
         assert server._generate_number(Schema.number(format="float")) == 3.14
 
@@ -157,14 +156,14 @@ class TestMockServer:
         """Generate mock boolean values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         assert server._generate_from_schema(Schema.boolean()) is False
 
     def test_generate_array(self):
         """Generate mock array values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         result = server._generate_from_schema(Schema.array(Schema.string()))
         assert isinstance(result, list)
         assert len(result) == 1
@@ -174,7 +173,7 @@ class TestMockServer:
         """Generate mock object values."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         schema = Schema.object(
             properties={
                 "id": Schema.integer(format="int32"),
@@ -190,7 +189,7 @@ class TestMockServer:
         """Use default value if available."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         schema = Schema(type="string", default="hello")
         assert server._generate_from_schema(schema) == "hello"
 
@@ -198,7 +197,7 @@ class TestMockServer:
         """Use first enum value."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         schema = Schema(type="string", enum=("active", "inactive", "pending"))
         assert server._generate_from_schema(schema) == "active"
 
@@ -206,7 +205,7 @@ class TestMockServer:
         """Can get request logs."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         # Add some mock logs
         from datetime import datetime
         log = RequestLog(
@@ -220,7 +219,7 @@ class TestMockServer:
             response=[],
         )
         server.logs.append(log)
-        
+
         logs = server.get_logs()
         assert len(logs) == 1
         assert logs[0].method == "GET"
@@ -229,7 +228,7 @@ class TestMockServer:
         """Can clear request logs."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         from datetime import datetime
         log = RequestLog(
             timestamp=datetime.now(),
@@ -242,7 +241,7 @@ class TestMockServer:
             response=[],
         )
         server.logs.append(log)
-        
+
         server.clear_logs()
         assert server.logs == []
 
@@ -255,7 +254,7 @@ class TestMockServerIntegration:
         """GET /users returns array response."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx
@@ -275,7 +274,7 @@ class TestMockServerIntegration:
         """GET /users/{id} returns object response."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx
@@ -292,7 +291,7 @@ class TestMockServerIntegration:
         """POST /users returns 201 created."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx
@@ -311,7 +310,7 @@ class TestMockServerIntegration:
         """DELETE /users/{id} returns 204."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx
@@ -325,13 +324,13 @@ class TestMockServerIntegration:
         """Requests are logged."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx
             async with httpx.AsyncClient() as client:
                 await client.get(f"http://{server.host}:{server.port}/users")
-            
+
             logs = server.get_logs()
             assert len(logs) == 1
             assert logs[0].method == "GET"
@@ -344,7 +343,7 @@ class TestMockServerIntegration:
         """Response includes X-Mock-Server header."""
         spec = create_test_spec()
         server = MockServer(spec=spec)
-        
+
         await server.start()
         try:
             import httpx

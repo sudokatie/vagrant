@@ -51,7 +51,7 @@ class SecretStorage:
         """
         if not KEYRING_AVAILABLE:
             return False
-        
+
         try:
             # Try to get the current backend - this will fail if none available
             backend = keyring.get_keyring()
@@ -87,7 +87,7 @@ class SecretStorage:
             return None
 
         key = self._make_key(environment, name)
-        
+
         try:
             return keyring.get_password(self.service_name, key)
         except KeyringError as e:
@@ -110,7 +110,7 @@ class SecretStorage:
             return False
 
         key = self._make_key(environment, name)
-        
+
         try:
             keyring.set_password(self.service_name, key, value)
             return True
@@ -133,7 +133,7 @@ class SecretStorage:
             return False
 
         key = self._make_key(environment, name)
-        
+
         try:
             keyring.delete_password(self.service_name, key)
             return True

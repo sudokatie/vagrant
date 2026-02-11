@@ -9,11 +9,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from http import HTTPStatus
 
 from aiohttp import web
 
@@ -60,10 +58,10 @@ class MockServer:
         for op in self.spec.operations:
             # Convert OpenAPI path params {id} to aiohttp format {id}
             aiohttp_path = op.path
-            
+
             handler = self._create_handler(op)
             method = op.method.lower()
-            
+
             if method == "get":
                 self._app.router.add_get(aiohttp_path, handler)
             elif method == "post":
@@ -81,7 +79,7 @@ class MockServer:
             # Add delay if configured
             if self.delay_ms > 0:
                 await asyncio.sleep(self.delay_ms / 1000)
-            
+
             # Parse request
             body = None
             if request.body_exists:
@@ -89,10 +87,10 @@ class MockServer:
                     body = await request.json()
                 except json.JSONDecodeError:
                     body = await request.text()
-            
+
             # Generate response
             status, response_body = self._generate_response(op, request)
-            
+
             # Log request
             log_entry = RequestLog(
                 timestamp=datetime.now(),
@@ -106,14 +104,14 @@ class MockServer:
             )
             self.logs.append(log_entry)
             logger.info(f"{op.method} {request.path} -> {status}")
-            
+
             # Return response
             return web.json_response(
                 response_body,
                 status=status,
                 headers={"X-Mock-Server": "vagrant"},
             )
-        
+
         return handler
 
     def _generate_response(
@@ -132,13 +130,13 @@ class MockServer:
         success_codes = ["200", "201", "204"]
         response = None
         status_code = 200
-        
+
         for code in success_codes:
             if code in op.responses:
                 response = op.responses[code]
                 status_code = int(code)
                 break
-        
+
         if not response:
             # Find any 2xx response
             for code, resp in op.responses.items():
@@ -146,27 +144,27 @@ class MockServer:
                     response = resp
                     status_code = int(code)
                     break
-        
+
         if not response:
             return 200, {"message": "OK"}
-        
+
         if status_code == 204:
             return 204, None
-        
+
         # Generate from schema if available
         if response.schema:
             return status_code, self._generate_from_schema(response.schema)
-        
+
         return status_code, {"message": response.description or "OK"}
 
     def _generate_from_schema(self, schema: Schema) -> Any:
         """Generate mock data from a schema."""
         if schema.default is not None:
             return schema.default
-        
+
         if schema.enum:
             return schema.enum[0]
-        
+
         if schema.type == "string":
             return self._generate_string(schema)
         elif schema.type == "integer":
@@ -186,7 +184,7 @@ class MockServer:
             for name, prop_schema in schema.properties.items():
                 result[name] = self._generate_from_schema(prop_schema)
             return result
-        
+
         return None
 
     def _generate_string(self, schema: Schema) -> str:
@@ -268,13 +266,13 @@ async def run_mock_server(
     """
     spec = parse_spec(spec_path)
     server = MockServer(spec=spec, host=host, port=port, delay_ms=delay_ms)
-    
+
     await server.start()
-    
+
     print(f"Mock server running at http://{host}:{port}")
     print(f"Serving {len(spec.operations)} endpoints from {spec.title}")
     print("Press Ctrl+C to stop")
-    
+
     try:
         while True:
             await asyncio.sleep(1)

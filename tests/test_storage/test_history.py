@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from vagrant.storage.history import HistoryEntry, HistoryStorage, redact_headers, REDACTED
+from vagrant.storage.history import REDACTED, HistoryEntry, HistoryStorage, redact_headers
 
 
 @pytest.fixture

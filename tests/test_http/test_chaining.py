@@ -1,6 +1,5 @@
 """Tests for request chaining."""
 
-import pytest
 
 from vagrant.http.chaining import (
     ChainContext,

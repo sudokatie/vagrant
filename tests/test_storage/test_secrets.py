@@ -3,9 +3,9 @@
 import pytest
 
 from vagrant.storage.secrets import (
+    SERVICE_NAME,
     SecretStorage,
     is_secret_variable,
-    SERVICE_NAME,
 )
 
 
@@ -81,7 +81,7 @@ class TestSecretStorageWithMock:
         # Import keyring and patch it
         import vagrant.storage.secrets as secrets_module
         monkeypatch.setattr(secrets_module, "KEYRING_AVAILABLE", True)
-        
+
         import keyring
         monkeypatch.setattr(keyring, "get_password", mock_get_password)
         monkeypatch.setattr(keyring, "set_password", mock_set_password)
@@ -92,10 +92,10 @@ class TestSecretStorageWithMock:
     def test_set_and_get(self, mock_keyring):
         """Can store and retrieve a secret."""
         storage = SecretStorage()
-        
+
         result = storage.set("production", "secret_token", "my-secret-value")
         assert result is True
-        
+
         value = storage.get("production", "secret_token")
         assert value == "my-secret-value"
 
@@ -109,10 +109,10 @@ class TestSecretStorageWithMock:
         """Can delete an existing secret."""
         storage = SecretStorage()
         storage.set("production", "secret_key", "value")
-        
+
         result = storage.delete("production", "secret_key")
         assert result is True
-        
+
         # Verify it's gone
         value = storage.get("production", "secret_key")
         assert value is None
@@ -126,16 +126,16 @@ class TestSecretStorageWithMock:
     def test_delete_environment(self, mock_keyring):
         """Can delete all secrets for an environment."""
         storage = SecretStorage()
-        
+
         # Store multiple secrets
         storage.set("staging", "secret_a", "value_a")
         storage.set("staging", "secret_b", "value_b")
         storage.set("staging", "secret_c", "value_c")
-        
+
         # Delete all
         deleted = storage.delete_environment("staging", ["secret_a", "secret_b", "secret_c"])
         assert deleted == 3
-        
+
         # Verify they're gone
         assert storage.get("staging", "secret_a") is None
         assert storage.get("staging", "secret_b") is None
@@ -144,10 +144,10 @@ class TestSecretStorageWithMock:
     def test_delete_environment_partial(self, mock_keyring):
         """delete_environment handles partial deletion."""
         storage = SecretStorage()
-        
+
         # Store only one
         storage.set("staging", "secret_a", "value_a")
-        
+
         # Try to delete three (two don't exist)
         deleted = storage.delete_environment("staging", ["secret_a", "secret_b", "secret_c"])
         assert deleted == 1

@@ -326,13 +326,13 @@ class TestEnvSetCommand:
         from vagrant.storage.environments import Environment
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["default"] = Environment(name="default")
-        
+
         mock_config = _MockConfig()
         mock_config.default_environment = "default"
-        
+
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: mock_config)
-        
+
         result = runner.invoke(cli, ["env", "set", "api_key", "secret123"])
         assert result.exit_code == 0
         assert "Set" in result.output
@@ -343,10 +343,10 @@ class TestEnvSetCommand:
         from vagrant.storage.environments import Environment
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["production"] = Environment(name="production")
-        
+
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: _MockConfig())
-        
+
         result = runner.invoke(cli, ["--env", "production", "env", "set", "token", "abc"])
         assert result.exit_code == 0
         assert mgr._envs["production"].variables.get("token") == "abc"
@@ -356,10 +356,10 @@ class TestEnvSetCommand:
         mgr = _MockEnvManager(tmp_path)
         mock_config = _MockConfig()
         mock_config.default_environment = ""
-        
+
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: mock_config)
-        
+
         result = runner.invoke(cli, ["env", "set", "key", "value"])
         assert result.exit_code == 2  # Config error
 
@@ -370,7 +370,7 @@ class TestParseAuthString:
     def test_parse_bearer_auth(self):
         """Parse bearer auth string."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("bearer:my-secret-token")
         assert config is not None
         assert config.type == "bearer"
@@ -379,7 +379,7 @@ class TestParseAuthString:
     def test_parse_basic_auth_with_password(self):
         """Parse basic auth string with password."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("basic:user:password")
         assert config is not None
         assert config.type == "basic"
@@ -389,7 +389,7 @@ class TestParseAuthString:
     def test_parse_basic_auth_without_password(self):
         """Parse basic auth string without password."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("basic:user")
         assert config is not None
         assert config.type == "basic"
@@ -399,7 +399,7 @@ class TestParseAuthString:
     def test_parse_apikey_simple(self):
         """Parse simple API key auth string."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("apikey:my-api-key")
         assert config is not None
         assert config.type == "apikey"
@@ -408,7 +408,7 @@ class TestParseAuthString:
     def test_parse_apikey_with_header_location(self):
         """Parse API key auth with header location."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("apikey:header:X-Custom-Key:my-api-key")
         assert config is not None
         assert config.type == "apikey"
@@ -419,7 +419,7 @@ class TestParseAuthString:
     def test_parse_apikey_with_query_location(self):
         """Parse API key auth with query location."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         config = parse_auth_string("apikey:query:api_key:secret123")
         assert config is not None
         assert config.type == "apikey"
@@ -430,21 +430,21 @@ class TestParseAuthString:
     def test_parse_empty_string(self):
         """Parse empty auth string returns None."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         assert parse_auth_string("") is None
         assert parse_auth_string(None) is None
 
     def test_parse_invalid_format(self):
         """Parse invalid auth string returns None."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         # No colon separator
         assert parse_auth_string("justtoken") is None
 
     def test_parse_unknown_type(self):
         """Parse unknown auth type returns None."""
         from vagrant.cli.commands import parse_auth_string
-        
+
         # Unknown type
         assert parse_auth_string("unknown:value") is None
 
@@ -455,7 +455,7 @@ class TestHistoryCleanup:
     def test_cleanup_called_on_startup(self, runner, tmp_path, monkeypatch):
         """History cleanup is called on CLI startup."""
         cleanup_called = []
-        
+
         class MockHistoryStorage:
             def __init__(self, **kw):
                 pass
@@ -463,7 +463,7 @@ class TestHistoryCleanup:
                 cleanup_called.append(limit)
             def list(self, limit=50):
                 return []
-        
+
         class MockConfig:
             history_limit = 500
             default_environment = ""
@@ -471,12 +471,12 @@ class TestHistoryCleanup:
             verify_ssl = True
             def to_dict(self):
                 return {"history_limit": 500}
-        
+
         monkeypatch.setattr("vagrant.cli.commands.HistoryStorage", MockHistoryStorage)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: MockConfig())
-        
+
         result = runner.invoke(cli, ["history"])
-        
+
         # Cleanup should be called with the config limit
         assert 500 in cleanup_called
 
@@ -486,9 +486,9 @@ class TestEnvShowWithAuth:
 
     def test_env_show_with_auth(self, runner, tmp_path, monkeypatch):
         """Env show displays auth type."""
-        from vagrant.storage.environments import Environment
         from vagrant.http.auth import AuthConfig
-        
+        from vagrant.storage.environments import Environment
+
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["test"] = Environment(
             name="test",
@@ -496,7 +496,7 @@ class TestEnvShowWithAuth:
             auth=AuthConfig(type="bearer", credentials={"token": "secret"})
         )
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
-        
+
         result = runner.invoke(cli, ["env", "show", "test"])
         assert result.exit_code == 0
         assert "bearer" in result.output.lower()
@@ -504,14 +504,14 @@ class TestEnvShowWithAuth:
     def test_env_show_with_variables(self, runner, tmp_path, monkeypatch):
         """Env show displays variables."""
         from vagrant.storage.environments import Environment
-        
+
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["test"] = Environment(
             name="test",
             variables={"api_key": "visible", "secret_password": "hidden"}
         )
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
-        
+
         result = runner.invoke(cli, ["env", "show", "test"])
         assert result.exit_code == 0
         # Variables should be shown
@@ -527,7 +527,7 @@ class TestEnvCreateAuthTypes:
         """Env create with API key auth."""
         mgr = _MockEnvManager(tmp_path)
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
-        
+
         result = runner.invoke(cli, [
             "env", "create", "test",
             "-a", "apikey",
@@ -540,7 +540,7 @@ class TestEnvCreateAuthTypes:
         """Env create with basic auth (token as user:pass)."""
         mgr = _MockEnvManager(tmp_path)
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
-        
+
         result = runner.invoke(cli, [
             "env", "create", "test",
             "-a", "basic",
@@ -556,11 +556,11 @@ class TestEnvCreateExisting:
     def test_env_create_existing_fails(self, runner, tmp_path, monkeypatch):
         """Env create fails if environment already exists."""
         from vagrant.storage.environments import Environment
-        
+
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["existing"] = Environment(name="existing")
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
-        
+
         result = runner.invoke(cli, ["env", "create", "existing"])
         assert result.exit_code == 2
         assert "already exists" in result.output
@@ -574,10 +574,10 @@ class TestEnvSetNonexistent:
         mgr = _MockEnvManager(tmp_path)
         mock_config = _MockConfig()
         mock_config.default_environment = ""
-        
+
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: mock_config)
-        
+
         result = runner.invoke(cli, ["--env", "nonexistent", "env", "set", "key", "value"])
         assert result.exit_code == 2
 
@@ -588,17 +588,17 @@ class TestEnvListWithDefault:
     def test_env_list_shows_default(self, runner, tmp_path, monkeypatch):
         """Env list marks default environment."""
         from vagrant.storage.environments import Environment
-        
+
         mgr = _MockEnvManager(tmp_path)
         mgr._envs["production"] = Environment(name="production")
         mgr._envs["staging"] = Environment(name="staging")
-        
+
         mock_config = _MockConfig()
         mock_config.default_environment = "production"
-        
+
         monkeypatch.setattr("vagrant.cli.commands.EnvironmentManager", lambda **kw: mgr)
         monkeypatch.setattr("vagrant.cli.commands.load_config", lambda: mock_config)
-        
+
         result = runner.invoke(cli, ["env", "list"])
         assert result.exit_code == 0
         assert "production" in result.output

@@ -14,7 +14,6 @@ from vagrant.core.config import get_config_dir, load_config
 from vagrant.http.auth import AuthConfig
 from vagrant.storage.secrets import SecretStorage, is_secret_variable
 
-
 # Placeholder stored in YAML when secret is in keychain
 KEYCHAIN_PLACEHOLDER = "{{keychain}}"
 
@@ -94,13 +93,13 @@ class EnvironmentManager:
 
         self.env_dir = config_dir / "environments"
         self.env_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Store last response for {{response.field.path}} substitution
         self._last_response: dict[str, Any] | None = None
-        
+
         # Initialize secret storage
         self._secret_storage = SecretStorage()
-        
+
         # Determine if keychain should be used
         if use_keychain is not None:
             self._use_keychain = use_keychain
@@ -110,11 +109,11 @@ class EnvironmentManager:
                 self._use_keychain = config.use_keychain
             except Exception:
                 self._use_keychain = False
-        
+
         # Only use keychain if it's enabled AND available
         if self._use_keychain and not SecretStorage.is_available():
             self._use_keychain = False
-    
+
     def set_last_response(self, response_body: Any) -> None:
         """Store the last response body for variable substitution.
         
@@ -125,7 +124,7 @@ class EnvironmentManager:
             self._last_response = response_body
         else:
             self._last_response = None
-    
+
     def _get_response_value(self, path: str) -> str | None:
         """Get a value from the last response using dot notation.
         
@@ -137,14 +136,14 @@ class EnvironmentManager:
         """
         if self._last_response is None:
             return None
-        
+
         parts = path.split(".")
         current: Any = self._last_response
-        
+
         for part in parts:
             if current is None:
                 return None
-            
+
             if isinstance(current, dict):
                 current = current.get(part)
             elif isinstance(current, list):
@@ -159,7 +158,7 @@ class EnvironmentManager:
                     return None
             else:
                 return None
-        
+
         # Convert final value to string
         if current is None:
             return None
@@ -212,7 +211,7 @@ class EnvironmentManager:
         data["name"] = name
 
         env = Environment.from_dict(data)
-        
+
         # If keychain enabled, fetch secret_ variables from keychain
         if self._use_keychain:
             for var_name, var_value in list(env.variables.items()):
@@ -225,7 +224,7 @@ class EnvironmentManager:
                         else:
                             # Secret not found in keychain, remove from dict
                             del env.variables[var_name]
-        
+
         return env
 
     def save(self, env: Environment) -> None:
@@ -238,10 +237,10 @@ class EnvironmentManager:
             env: Environment to save.
         """
         path = self.env_dir / f"{env.name}.yaml"
-        
+
         # Create a copy of the environment for serialization
         data = env.to_dict()
-        
+
         # If keychain enabled, store secrets separately
         if self._use_keychain:
             for var_name, var_value in list(data["variables"].items()):

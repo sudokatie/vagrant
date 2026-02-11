@@ -2,25 +2,18 @@
 
 import pytest
 
+from vagrant.core.errors import SpecParseError
 from vagrant.parser.graphql import (
     GraphQLArg,
-    GraphQLDirective,
-    GraphQLEnumValue,
-    GraphQLField,
-    GraphQLInputField,
     GraphQLOperation,
     GraphQLParser,
-    GraphQLSpec,
-    GraphQLType,
     GraphQLTypeRef,
-    build_query,
-    _parse_type_ref,
     _parse_arg,
     _parse_field,
     _parse_type,
+    _parse_type_ref,
+    build_query,
 )
-from vagrant.core.errors import SpecParseError
-
 
 # Sample introspection response for testing
 SAMPLE_INTROSPECTION = {
@@ -493,7 +486,7 @@ class TestGraphQLParser:
         """Parse a full introspection result."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         assert spec.endpoint == "http://example.com/graphql"
         assert spec.query_type == "Query"
         assert spec.mutation_type == "Mutation"
@@ -503,11 +496,11 @@ class TestGraphQLParser:
         """Parsed spec contains types."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         assert "User" in spec.types
         assert "Query" in spec.types
         assert "Mutation" in spec.types
-        
+
         user_type = spec.types["User"]
         assert user_type.kind == "OBJECT"
         assert len(user_type.fields) == 3
@@ -516,7 +509,7 @@ class TestGraphQLParser:
         """Parsed spec contains directives."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         assert len(spec.directives) == 1
         assert spec.directives[0].name == "skip"
         assert "FIELD" in spec.directives[0].locations
@@ -535,10 +528,10 @@ class TestGraphQLSpec:
         """get_operations returns all queries and mutations."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         operations = spec.get_operations()
         assert len(operations) == 3  # 2 queries + 1 mutation
-        
+
         op_names = [op.name for op in operations]
         assert "user" in op_names
         assert "users" in op_names
@@ -548,11 +541,11 @@ class TestGraphQLSpec:
         """Operations have correct operation_type."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         operations = spec.get_operations()
         queries = [op for op in operations if op.operation_type == "query"]
         mutations = [op for op in operations if op.operation_type == "mutation"]
-        
+
         assert len(queries) == 2
         assert len(mutations) == 1
 
@@ -560,10 +553,10 @@ class TestGraphQLSpec:
         """get_user_types excludes builtins."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         user_types = spec.get_user_types()
         type_names = [t.name for t in user_types]
-        
+
         assert "User" in type_names
         assert "Query" in type_names
         assert "__Schema" not in type_names
@@ -572,7 +565,7 @@ class TestGraphQLSpec:
         """Types starting with __ are builtin."""
         parser = GraphQLParser()
         spec = parser.parse_introspection_result("http://example.com/graphql", SAMPLE_INTROSPECTION)
-        
+
         assert spec.types["__Schema"].is_builtin()
         assert not spec.types["User"].is_builtin()
 

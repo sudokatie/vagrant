@@ -115,7 +115,7 @@ class OpenAPIParser:
 
         # Component schemas
         schemas = self._parse_component_schemas()
-        
+
         # Security schemes
         security_schemes = self._parse_security_schemes()
 
@@ -139,7 +139,7 @@ class OpenAPIParser:
                     enum=tuple(var_data.get("enum", [])),
                     description=var_data.get("description"),
                 )
-        
+
         return Server(
             url=data.get("url", ""),
             description=data.get("description"),
@@ -340,7 +340,7 @@ class OpenAPIParser:
         """Parse security schemes from components."""
         components = self._raw.get("components", {})
         schemes_data = components.get("securitySchemes", {})
-        
+
         schemes = {}
         for name, data in schemes_data.items():
             if isinstance(data, dict):
@@ -352,11 +352,11 @@ class OpenAPIParser:
                     bearer_format=data.get("bearerFormat"),
                     description=data.get("description"),
                 )
-        
+
         return schemes
 
     def _parse_security_requirements(
-        self, 
+        self,
         requirements: list[dict[str, list[str]]]
     ) -> tuple[dict[str, tuple[str, ...]], ...]:
         """Parse security requirements list."""

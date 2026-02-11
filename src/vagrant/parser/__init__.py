@@ -1,15 +1,5 @@
 """Parser module for API specifications."""
 
-from vagrant.parser.models import (
-    ApiSpec,
-    Operation,
-    Parameter,
-    RequestBody,
-    Response,
-    Schema,
-    Server,
-)
-from vagrant.parser.openapi import OpenAPIParser, parse_spec
 from vagrant.parser.graphql import (
     GraphQLArg,
     GraphQLDirective,
@@ -23,6 +13,16 @@ from vagrant.parser.graphql import (
     GraphQLTypeRef,
     build_query,
 )
+from vagrant.parser.models import (
+    ApiSpec,
+    Operation,
+    Parameter,
+    RequestBody,
+    Response,
+    Schema,
+    Server,
+)
+from vagrant.parser.openapi import OpenAPIParser, parse_spec
 
 __all__ = [
     # Models

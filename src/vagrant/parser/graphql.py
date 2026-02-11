@@ -13,7 +13,6 @@ import httpx
 
 from vagrant.core.errors import SpecParseError
 
-
 # Standard GraphQL introspection query
 INTROSPECTION_QUERY = """
 query IntrospectionQuery {
@@ -218,7 +217,7 @@ class GraphQLSpec:
     def get_operations(self) -> list[GraphQLOperation]:
         """Get all queries, mutations, and subscriptions."""
         operations: list[GraphQLOperation] = []
-        
+
         # Get queries
         if self.query_type and self.query_type in self.types:
             query_obj = self.types[self.query_type]
@@ -232,7 +231,7 @@ class GraphQLSpec:
                     is_deprecated=f.is_deprecated,
                     deprecation_reason=f.deprecation_reason,
                 ))
-        
+
         # Get mutations
         if self.mutation_type and self.mutation_type in self.types:
             mutation_obj = self.types[self.mutation_type]
@@ -246,7 +245,7 @@ class GraphQLSpec:
                     is_deprecated=f.is_deprecated,
                     deprecation_reason=f.deprecation_reason,
                 ))
-        
+
         # Get subscriptions
         if self.subscription_type and self.subscription_type in self.types:
             sub_obj = self.types[self.subscription_type]
@@ -260,7 +259,7 @@ class GraphQLSpec:
                     is_deprecated=f.is_deprecated,
                     deprecation_reason=f.deprecation_reason,
                 ))
-        
+
         return operations
 
     def get_user_types(self) -> list[GraphQLType]:
@@ -329,7 +328,7 @@ def _parse_type(data: dict[str, Any]) -> GraphQLType:
     enum_values = tuple(_parse_enum_value(v) for v in data.get("enumValues") or [])
     interfaces = tuple(_parse_type_ref(i) for i in data.get("interfaces") or [] if i)
     possible_types = tuple(_parse_type_ref(p) for p in data.get("possibleTypes") or [] if p)
-    
+
     return GraphQLType(
         kind=data.get("kind", "OBJECT"),
         name=data.get("name", ""),
@@ -472,25 +471,25 @@ def build_query(
     var_defs = []
     for arg in operation.args:
         var_defs.append(f"${arg.name}: {arg.type.display_name()}")
-    
+
     var_def_str = f"({', '.join(var_defs)})" if var_defs else ""
-    
+
     # Build argument applications
     arg_apps = []
     for arg in operation.args:
         arg_apps.append(f"{arg.name}: ${arg.name}")
-    
+
     arg_app_str = f"({', '.join(arg_apps)})" if arg_apps else ""
-    
+
     # Default selection is just the operation (for scalar return types)
     # For objects, caller should provide selection
     field_selection = selection or ""
     if field_selection:
         field_selection = f" {{ {field_selection} }}"
-    
+
     op_type = operation.operation_type
     query = f"{op_type}{var_def_str} {{ {operation.name}{arg_app_str}{field_selection} }}"
-    
+
     return {
         "query": query,
         "variables": variables or {},

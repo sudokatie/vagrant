@@ -119,12 +119,12 @@ class EndpointBrowser(Tree[Operation]):
             path = path[:37] + "..."
 
         deprecated = " [dim](deprecated)[/dim]" if op.deprecated else ""
-        
+
         # Show checkmark for visited endpoints
         visited = " [dim]✓[/dim]" if self.is_visited(op) else ""
 
         return f"{method_badge} {path}{deprecated}{visited}"
-    
+
     def mark_visited(self, op: Operation) -> None:
         """Mark an operation as visited (request was sent).
         
@@ -134,7 +134,7 @@ class EndpointBrowser(Tree[Operation]):
         self._visited.add((op.method, op.path))
         # Rebuild tree to update display
         self._build_tree()
-    
+
     def is_visited(self, op: Operation) -> bool:
         """Check if an operation has been visited.
         
@@ -145,11 +145,11 @@ class EndpointBrowser(Tree[Operation]):
             True if the operation has been visited.
         """
         return (op.method, op.path) in self._visited
-    
+
     def get_visited_count(self) -> int:
         """Return the number of visited endpoints."""
         return len(self._visited)
-    
+
     def clear_visited(self) -> None:
         """Clear all visited markers."""
         self._visited.clear()

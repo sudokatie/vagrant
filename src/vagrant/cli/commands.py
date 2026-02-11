@@ -69,14 +69,14 @@ def parse_auth_string(auth_str: str) -> AuthConfig | None:
     """
     if not auth_str:
         return None
-    
+
     parts = auth_str.split(":", 1)
     if len(parts) < 2:
         return None
-    
+
     auth_type = parts[0].lower()
     value = parts[1]
-    
+
     if auth_type == "bearer":
         return AuthConfig(type="bearer", credentials={"token": value})
     elif auth_type == "basic":
@@ -93,7 +93,7 @@ def parse_auth_string(auth_str: str) -> AuthConfig | None:
                 credentials={"key": subparts[2], "name": subparts[1], "location": subparts[0]}
             )
         return AuthConfig(type="apikey", credentials={"key": value})
-    
+
     return None
 
 
@@ -145,7 +145,7 @@ def cli(
     """
     global quiet_mode
     quiet_mode = quiet
-    
+
     gctx = GlobalContext()
     gctx.verbose = verbose
     gctx.quiet = quiet
@@ -155,15 +155,15 @@ def cli(
     gctx.timeout = timeout
     gctx.verify_ssl = not no_verify
     gctx.output_format = output
-    
+
     # Parse headers
     for h in headers:
         if ":" in h:
             key, value = h.split(":", 1)
             gctx.headers[key.strip()] = value.strip()
-    
+
     ctx.obj = gctx
-    
+
     # Auto-cleanup history on startup (per spec 7.2)
     try:
         config = load_config()
@@ -229,7 +229,7 @@ def explore(gctx: GlobalContext, spec_or_url: str, info: bool) -> None:
     env = None
     env_mgr = EnvironmentManager()
     config = load_config()
-    
+
     if gctx.env_name:
         env = env_mgr.get(gctx.env_name)
     elif config.default_environment and env_mgr.exists(config.default_environment):
@@ -253,30 +253,30 @@ def import_spec(gctx: GlobalContext, spec_file: str, name: str | None) -> None:
     path = Path(spec_file)
     if not path.exists():
         raise SpecParseError(f"File not found: {spec_file}")
-    
+
     # Parse to validate
     spec = parse_spec(spec_file)
-    
+
     # Determine cache name
     cache_name = name or path.stem
-    
+
     # Cache directory
     cache_dir = get_config_dir() / "specs"
     cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Copy spec to cache
     cache_path = cache_dir / f"{cache_name}.yaml"
-    
+
     # Read and re-save as YAML for consistency
     content = path.read_text()
     try:
         data = yaml.safe_load(content)
     except yaml.YAMLError:
         data = json.loads(content)
-    
+
     with open(cache_path, "w") as f:
         yaml.safe_dump(data, f, default_flow_style=False)
-    
+
     output_print(f"[green]Imported '{spec.title}' as '{cache_name}'[/green]")
     output_print(f"[dim]Cached at: {cache_path}[/dim]")
     output_print(f"[dim]Use with: vagrant explore {cache_name}[/dim]")
@@ -307,7 +307,7 @@ def request_cmd(
     env = None
     env_mgr = EnvironmentManager()
     env_name = gctx.env_name
-    
+
     if env_name:
         env = env_mgr.get(env_name)
     elif config.default_environment and env_mgr.exists(config.default_environment):
@@ -598,21 +598,21 @@ def env_set(gctx: GlobalContext, name: str, value: str) -> None:
     """
     manager = EnvironmentManager()
     config = load_config()
-    
+
     # Determine which environment to use
     env_name = gctx.env_name or config.default_environment
     if not env_name:
         output_print("[red]No environment specified. Use --env or set a default.[/red]")
         sys.exit(2)
-    
+
     if not manager.exists(env_name):
         output_print(f"[red]Environment '{env_name}' not found.[/red]")
         sys.exit(2)
-    
+
     environment = manager.get(env_name)
     environment.variables[name] = value
     manager.save(environment)
-    
+
     # Indicate if stored in keychain
     from vagrant.storage.secrets import is_secret_variable
     if is_secret_variable(name) and config.use_keychain:
@@ -629,26 +629,26 @@ def env_keychain_status() -> None:
     Displays whether system keychain is available and enabled.
     """
     from vagrant.storage.secrets import SecretStorage
-    
+
     config = load_config()
     available = SecretStorage.is_available()
     enabled = config.use_keychain
-    
+
     output_print("[bold]Keychain Status[/bold]")
     output_print()
-    
+
     if available:
         output_print("  System keychain: [green]available[/green]")
     else:
         output_print("  System keychain: [red]not available[/red]")
         output_print("  [dim]Install keyring backends or check system configuration[/dim]")
-    
+
     if enabled:
         output_print("  Keychain storage: [green]enabled[/green]")
     else:
         output_print("  Keychain storage: [dim]disabled[/dim]")
         output_print("  [dim]Enable with: vagrant config set use_keychain true[/dim]")
-    
+
     if enabled and available:
         output_print()
         output_print("  [green]Secrets will be stored securely in system keychain.[/green]")
@@ -712,9 +712,9 @@ def mock(spec_path: str, host: str, port: int, delay: int) -> None:
         vagrant mock api.yaml --delay 100
     """
     from vagrant.mock.server import run_mock_server
-    
+
     output_print(f"[bold]Starting mock server from {spec_path}[/bold]")
-    
+
     try:
         asyncio.run(run_mock_server(spec_path, host=host, port=port, delay_ms=delay))
     except KeyboardInterrupt:

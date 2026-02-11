@@ -295,7 +295,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """set_last_response ignores non-dict responses."""
         manager.set_last_response("just a string")
         assert manager._last_response is None
-        
+
         manager.set_last_response([1, 2, 3])
         assert manager._last_response is None
 
@@ -303,7 +303,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """Substitute simple response field."""
         env = Environment(name="test")
         manager.set_last_response({"id": 123, "name": "John"})
-        
+
         result = manager.substitute("User ID: {{response.id}}", env)
         assert result == "User ID: 123"
 
@@ -318,7 +318,7 @@ class TestEnvironmentManagerResponseSubstitution:
                 }
             }
         })
-        
+
         result = manager.substitute("Email: {{response.data.user.email}}", env)
         assert result == "Email: test@example.com"
 
@@ -332,7 +332,7 @@ class TestEnvironmentManagerResponseSubstitution:
                 {"name": "third"}
             ]
         })
-        
+
         result = manager.substitute("Second item: {{response.items.1.name}}", env)
         assert result == "Second item: second"
 
@@ -340,7 +340,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """Missing response field left as-is."""
         env = Environment(name="test")
         manager.set_last_response({"id": 123})
-        
+
         result = manager.substitute("{{response.nonexistent}}", env)
         assert result == "{{response.nonexistent}}"
 
@@ -348,7 +348,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """No response stored leaves variable as-is."""
         env = Environment(name="test")
         # Don't set any response
-        
+
         result = manager.substitute("{{response.id}}", env)
         assert result == "{{response.id}}"
 
@@ -356,7 +356,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """Out of bounds array index left as-is."""
         env = Environment(name="test")
         manager.set_last_response({"items": [1, 2]})
-        
+
         result = manager.substitute("{{response.items.99}}", env)
         assert result == "{{response.items.99}}"
 
@@ -364,7 +364,7 @@ class TestEnvironmentManagerResponseSubstitution:
         """Invalid array index (non-integer) left as-is."""
         env = Environment(name="test")
         manager.set_last_response({"items": [1, 2, 3]})
-        
+
         result = manager.substitute("{{response.items.abc}}", env)
         assert result == "{{response.items.abc}}"
 
@@ -376,9 +376,9 @@ class TestEnvironmentManagerResponseSubstitution:
             variables={"api_key": "secret"}
         )
         manager.set_last_response({"user_id": 789})
-        
+
         result = manager.substitute(
-            "{{base_url}}/users/{{response.user_id}}?key={{api_key}}", 
+            "{{base_url}}/users/{{response.user_id}}?key={{api_key}}",
             env
         )
         assert result == "https://api.example.com/users/789?key=secret"
@@ -386,7 +386,7 @@ class TestEnvironmentManagerResponseSubstitution:
     def test_get_response_value_non_dict_value(self, manager: EnvironmentManager):
         """_get_response_value handles traversing to non-dict/non-list."""
         manager.set_last_response({"value": "string"})
-        
+
         # Trying to access a property on a string should return None
         result = manager._get_response_value("value.length")
         assert result is None
@@ -398,7 +398,7 @@ class TestEnvironmentManagerResponseSubstitution:
             "float_val": 3.14,
             "bool_val": True,
         })
-        
+
         assert manager._get_response_value("int_val") == "42"
         assert manager._get_response_value("float_val") == "3.14"
         assert manager._get_response_value("bool_val") == "True"
@@ -426,12 +426,12 @@ class TestKeychainIntegration:
         # Import and patch keyring
         import vagrant.storage.secrets as secrets_module
         monkeypatch.setattr(secrets_module, "KEYRING_AVAILABLE", True)
-        
+
         import keyring
         monkeypatch.setattr(keyring, "get_password", mock_get_password)
         monkeypatch.setattr(keyring, "set_password", mock_set_password)
         monkeypatch.setattr(keyring, "delete_password", mock_delete_password)
-        
+
         # Mock is_available to return True
         monkeypatch.setattr(secrets_module.SecretStorage, "is_available", staticmethod(lambda: True))
 
@@ -449,7 +449,7 @@ class TestKeychainIntegration:
             variables={"secret_api_key": "my-secret-value", "normal_var": "visible"}
         )
         keychain_manager.save(env)
-        
+
         # Secret should be in keychain
         assert mock_keyring.get("vagrant:production:secret_api_key") == "my-secret-value"
 
@@ -457,14 +457,14 @@ class TestKeychainIntegration:
         """Secrets are loaded from keychain when enabled."""
         # Pre-store secret in keychain
         mock_keyring["vagrant:production:secret_api_key"] = "stored-secret"
-        
+
         # Save env with placeholder
         env = Environment(
             name="production",
             variables={"secret_api_key": "{{keychain}}", "normal_var": "visible"}
         )
         keychain_manager.save(env)
-        
+
         # Load should get secret from keychain
         loaded = keychain_manager.get("production")
         assert loaded.variables["secret_api_key"] == "stored-secret"
@@ -477,10 +477,10 @@ class TestKeychainIntegration:
             variables={"api_version": "v1", "timeout": "30"}
         )
         keychain_manager.save(env)
-        
+
         # Nothing should be in keychain
         assert len([k for k in mock_keyring if "test:" in k]) == 0
-        
+
         # Should load from YAML
         loaded = keychain_manager.get("test")
         assert loaded.variables["api_version"] == "v1"
@@ -493,26 +493,26 @@ class TestKeychainIntegration:
             variables={"secret_token": "secret-value"}
         )
         keychain_manager.save(env)
-        
+
         # Verify secret is in keychain
         assert mock_keyring.get("vagrant:staging:secret_token") == "secret-value"
-        
+
         # Delete environment
         keychain_manager.delete("staging")
-        
+
         # Secret should be removed from keychain
         assert "vagrant:staging:secret_token" not in mock_keyring
 
     def test_keychain_disabled_stores_in_yaml(self, temp_config_dir: Path):
         """When keychain disabled, secrets are stored in YAML."""
         manager = EnvironmentManager(config_dir=temp_config_dir, use_keychain=False)
-        
+
         env = Environment(
             name="test",
             variables={"secret_key": "plain-text-secret"}
         )
         manager.save(env)
-        
+
         # Load should get secret from YAML
         loaded = manager.get("test")
         assert loaded.variables["secret_key"] == "plain-text-secret"

@@ -139,7 +139,7 @@ class ServerVariable:
         enum: Allowed values for the variable.
         description: Human-readable description.
     """
-    
+
     default: str
     enum: tuple[str, ...] = ()
     description: str | None = None
@@ -157,7 +157,7 @@ class SecurityScheme:
         bearer_format: Format hint for bearer tokens (e.g., JWT).
         description: Human-readable description.
     """
-    
+
     type: str  # apiKey, http, oauth2, openIdConnect
     name: str | None = None  # for apiKey
     location: str | None = None  # header, query, cookie (for apiKey)

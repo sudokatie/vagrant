@@ -10,7 +10,6 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Footer, Header, Input, Static
-from textual.worker import Worker, WorkerState
 
 from vagrant.core.errors import NetworkError, VagrantError
 from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
@@ -21,7 +20,6 @@ from vagrant.tui.widgets.endpoint_browser import EndpointBrowser, EndpointSelect
 from vagrant.tui.widgets.history_panel import HistoryPanel, HistorySelected
 from vagrant.tui.widgets.request_builder import RequestBuilder, RequestSent
 from vagrant.tui.widgets.response_viewer import ResponseViewer
-
 
 # Load CSS from external file
 CSS_PATH = Path(__file__).parent / "styles.tcss"
@@ -167,7 +165,7 @@ class VagrantApp(App):
 
             # Send request
             response = await self._http_client.send(final_request)
-            
+
             # Store response for {{response.field.path}} substitution
             self._env_mgr.set_last_response(response.body)
 

@@ -154,7 +154,7 @@ class RequestBuilder(Widget):
         auth_row.compose_add_child(Static("Type", classes="param-label"))
         auth_row.compose_add_child(auth_select)
         container.mount(auth_row)
-        
+
         # Auth value input (token, user:pass, or key)
         auth_value_row = Horizontal(classes="param-row")
         auth_value_row.compose_add_child(Static("Credentials", classes="param-label"))
@@ -191,7 +191,7 @@ class RequestBuilder(Widget):
 
         input_id = f"param-{location}-{param.name}"
         schema = param.schema
-        
+
         # Type-aware input selection (spec 4.3)
         if schema.type == "boolean":
             # Boolean: use Switch widget
@@ -200,7 +200,7 @@ class RequestBuilder(Widget):
             row.compose_add_child(label)
             row.compose_add_child(switch)
             return row
-        
+
         elif schema.enum:
             # Enum: use Select dropdown
             options = [(str(v), str(v)) for v in schema.enum]
@@ -211,10 +211,10 @@ class RequestBuilder(Widget):
             row.compose_add_child(label)
             row.compose_add_child(select)
             return row
-        
+
         # Default: Input widget with type-aware placeholder
         placeholder = param.description or ""
-        
+
         # Add type-specific hints
         if schema.type == "integer":
             type_hint = "integer"
@@ -232,12 +232,12 @@ class RequestBuilder(Widget):
             type_hint = "URL"
         else:
             type_hint = schema.type
-        
+
         if placeholder:
             placeholder = f"{placeholder} ({type_hint})"
         else:
             placeholder = type_hint
-            
+
         if schema.default is not None:
             placeholder = f"{placeholder} [default: {schema.default}]"
 
@@ -280,7 +280,7 @@ class RequestBuilder(Widget):
                 else:
                     # Input widget
                     value = widget.value.strip() if hasattr(widget, 'value') else ""
-                
+
                 if value:
                     if param.location == "path":
                         path_params[param.name] = value
@@ -322,13 +322,13 @@ class RequestBuilder(Widget):
         try:
             auth_type_select = self.query_one("#auth-type", Select)
             auth_value_input = self.query_one("#auth-value", Input)
-            
+
             auth_type = str(auth_type_select.value) if auth_type_select.value else "none"
             auth_value = auth_value_input.value.strip() if auth_value_input.value else ""
-            
+
             if auth_type == "none" or not auth_value:
                 return None
-            
+
             if auth_type == "bearer":
                 return AuthConfig(type="bearer", credentials={"token": auth_value})
             elif auth_type == "basic":
@@ -340,7 +340,7 @@ class RequestBuilder(Widget):
                 return AuthConfig(type="basic", credentials={"username": user, "password": password})
             elif auth_type == "apikey":
                 return AuthConfig(type="apikey", credentials={"key": auth_value})
-            
+
             return None
         except Exception:
             return None
