@@ -25,6 +25,7 @@ Vagrant collapses this into: point, click, explore.
 - **Interactive TUI** - Browse endpoints, build requests, view responses
 - **Terminal-native** - Works over SSH, no browser required
 - **Request history** - See what you've tried, replay it
+- **Request chaining** - Extract response values and use in subsequent requests
 - **Environments** - Switch between prod/staging/local with one keystroke
 - **Multiple auth types** - Bearer, Basic, API key
 - **Secure secret storage** - Optional system keychain integration
@@ -85,6 +86,37 @@ vagrant env set API_TOKEN "your-secret-token"
 # Use in requests
 vagrant request GET {{base_url}}/users -e production
 ```
+
+### Request Chaining
+
+Extract values from responses and use them in subsequent requests:
+
+```python
+from vagrant.http import ChainContext, ExtractRule, extract_from_response, interpolate_dict
+
+# Create a context to store variables
+ctx = ChainContext()
+
+# After a login request, extract the token
+login_response = {"data": {"token": "abc123", "user": {"id": 456}}}
+rules = [
+    ExtractRule(name="token", path="data.token"),
+    ExtractRule(name="user_id", path="data.user.id"),
+]
+extract_from_response(login_response, rules, ctx)
+
+# Use in next request
+headers = interpolate_dict({"Authorization": "Bearer {{token}}"}, ctx)
+# => {"Authorization": "Bearer abc123"}
+
+url = interpolate_string("/users/{{user_id}}/profile", ctx)
+# => "/users/456/profile"
+```
+
+Extraction supports:
+- Dot notation for nested values: `data.user.id`
+- Array indexing: `items.0.name`
+- Default values when path not found
 
 ## Configuration
 
