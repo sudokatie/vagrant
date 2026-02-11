@@ -22,6 +22,7 @@ Vagrant collapses this into: point, click, explore.
 ## Features
 
 - **OpenAPI import** - Load specs from files or URLs
+- **GraphQL introspection** - Fetch and parse GraphQL schemas automatically
 - **Interactive TUI** - Browse endpoints, build requests, view responses
 - **Terminal-native** - Works over SSH, no browser required
 - **Request history** - See what you've tried, replay it
@@ -117,6 +118,48 @@ Extraction supports:
 - Dot notation for nested values: `data.user.id`
 - Array indexing: `items.0.name`
 - Default values when path not found
+
+### GraphQL Support
+
+Vagrant can introspect GraphQL APIs and parse their schemas:
+
+```python
+import asyncio
+from vagrant.parser import GraphQLParser, build_query
+
+async def explore_graphql():
+    parser = GraphQLParser()
+    
+    # Fetch schema via introspection
+    spec = await parser.parse_endpoint(
+        "https://api.example.com/graphql",
+        headers={"Authorization": "Bearer TOKEN"}
+    )
+    
+    # Browse available operations
+    for op in spec.get_operations():
+        print(f"{op.operation_type}: {op.name}")
+        for arg in op.args:
+            print(f"  - {arg.name}: {arg.type.display_name()}")
+    
+    # Build a query
+    user_query = next(op for op in spec.get_operations() if op.name == "user")
+    request_body = build_query(
+        user_query,
+        variables={"id": "123"},
+        selection="id name email"
+    )
+    # => {"query": "query($id: ID!) { user(id: $id) { id name email } }", "variables": {"id": "123"}}
+
+asyncio.run(explore_graphql())
+```
+
+The parser supports:
+- Full introspection query with type resolution
+- Queries, mutations, and subscriptions
+- Input types, enums, and interfaces
+- Deprecated field detection
+- Automatic query building with variables
 
 ## Configuration
 
