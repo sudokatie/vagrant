@@ -693,5 +693,33 @@ def config_list() -> None:
         output_print(f"  {key}: {value}")
 
 
+@cli.command("mock")
+@click.argument("spec_path", type=click.Path(exists=True))
+@click.option("--host", "-h", default="127.0.0.1", help="Host to bind to")
+@click.option("--port", "-p", type=int, default=8080, help="Port to listen on")
+@click.option("--delay", "-d", type=int, default=0, help="Response delay in milliseconds")
+@handle_errors
+def mock(spec_path: str, host: str, port: int, delay: int) -> None:
+    """Start a mock server from an OpenAPI spec.
+    
+    Generates mock responses based on examples and schemas in the spec.
+    Useful for testing API integrations without a real backend.
+    
+    Examples:
+    
+        vagrant mock openapi.yaml
+        vagrant mock ./spec.json --port 3000
+        vagrant mock api.yaml --delay 100
+    """
+    from vagrant.mock.server import run_mock_server
+    
+    output_print(f"[bold]Starting mock server from {spec_path}[/bold]")
+    
+    try:
+        asyncio.run(run_mock_server(spec_path, host=host, port=port, delay_ms=delay))
+    except KeyboardInterrupt:
+        output_print("\n[dim]Server stopped.[/dim]")
+
+
 if __name__ == "__main__":
     cli()
