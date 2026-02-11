@@ -75,6 +75,27 @@ vagrant request POST https://api.example.com/users -d '{"name": "test"}'
 vagrant request GET https://api.example.com/users -H "Authorization: Bearer TOKEN"
 ```
 
+### Mock Server
+
+Start a mock server that generates responses from your OpenAPI spec:
+
+```bash
+# Basic usage
+vagrant mock openapi.yaml
+
+# Custom port
+vagrant mock spec.json --port 3000
+
+# Add artificial delay (useful for testing loading states)
+vagrant mock api.yaml --delay 100
+```
+
+The mock server:
+- Generates responses from schema definitions
+- Supports GET, POST, PUT, PATCH, DELETE
+- Logs all requests for inspection
+- Adds `X-Mock-Server: vagrant` header to responses
+
 ### Environments
 
 ```bash
