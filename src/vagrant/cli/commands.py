@@ -693,6 +693,113 @@ def config_list() -> None:
         output_print(f"  {key}: {value}")
 
 
+@cli.command()
+@click.argument("endpoint")
+@click.option("--info", "-i", is_flag=True, help="Show schema info without launching TUI")
+@click.option("--header", "-H", "extra_headers", multiple=True, help="Add header for introspection")
+@pass_context
+@handle_errors
+def graphql(gctx: GlobalContext, endpoint: str, info: bool, extra_headers: tuple[str, ...]) -> None:
+    """Launch GraphQL TUI explorer.
+    
+    ENDPOINT is the GraphQL API URL.
+    
+    Fetches the schema via introspection and provides an interactive
+    interface for browsing and executing queries, mutations, and subscriptions.
+    
+    Examples:
+    
+        vagrant graphql https://api.example.com/graphql
+        vagrant graphql https://api.github.com/graphql -H "Authorization:Bearer TOKEN"
+    """
+    from vagrant.parser.graphql import GraphQLParser
+
+    # Parse extra headers for introspection
+    headers: dict[str, str] = dict(gctx.headers)
+    for h in extra_headers:
+        if ":" in h:
+            key, value = h.split(":", 1)
+            headers[key.strip()] = value.strip()
+
+    # Add auth header if configured
+    if gctx.auth:
+        if gctx.auth.type == "bearer":
+            token = gctx.auth.credentials.get("token", "")
+            headers["Authorization"] = f"Bearer {token}"
+        elif gctx.auth.type == "apikey":
+            key = gctx.auth.credentials.get("key", "")
+            key_name = gctx.auth.credentials.get("name", "X-API-Key")
+            headers[key_name] = key
+
+    # Fetch schema via introspection
+    parser = GraphQLParser(timeout=gctx.timeout)
+
+    async def fetch_schema():
+        return await parser.parse_endpoint(endpoint, headers or None)
+
+    output_print(f"[dim]Fetching schema from {endpoint}...[/dim]")
+    spec = asyncio.run(fetch_schema())
+
+    operations = spec.get_operations()
+
+    if info:
+        # Show schema summary
+        queries = [op for op in operations if op.operation_type == "query"]
+        mutations = [op for op in operations if op.operation_type == "mutation"]
+        subscriptions = [op for op in operations if op.operation_type == "subscription"]
+
+        output_print(f"[bold]GraphQL API[/bold]")
+        output_print(f"[dim]Endpoint: {endpoint}[/dim]")
+        output_print()
+
+        output_print(f"[bold]Operations:[/bold]")
+        output_print(f"  Queries: {len(queries)}")
+        output_print(f"  Mutations: {len(mutations)}")
+        output_print(f"  Subscriptions: {len(subscriptions)}")
+        output_print()
+
+        if queries:
+            output_print("[bold cyan]Queries[/bold cyan]")
+            for op in queries:
+                deprecated = " [dim](deprecated)[/dim]" if op.is_deprecated else ""
+                output_print(f"  [green]Q[/green] {op.name}{deprecated} -> {op.type.display_name()}")
+
+        if mutations:
+            output_print("[bold cyan]Mutations[/bold cyan]")
+            for op in mutations:
+                deprecated = " [dim](deprecated)[/dim]" if op.is_deprecated else ""
+                output_print(f"  [yellow]M[/yellow] {op.name}{deprecated} -> {op.type.display_name()}")
+
+        if subscriptions:
+            output_print("[bold cyan]Subscriptions[/bold cyan]")
+            for op in subscriptions:
+                deprecated = " [dim](deprecated)[/dim]" if op.is_deprecated else ""
+                output_print(f"  [blue]S[/blue] {op.name}{deprecated} -> {op.type.display_name()}")
+
+        return
+
+    # Load environment if specified
+    env = None
+    env_mgr = EnvironmentManager()
+    config = load_config()
+
+    if gctx.env_name:
+        env = env_mgr.get(gctx.env_name)
+    elif config.default_environment and env_mgr.exists(config.default_environment):
+        env = env_mgr.get(config.default_environment)
+
+    # Override endpoint from env if specified
+    if env and env.base_url:
+        spec = GraphQLParser(timeout=gctx.timeout)._parse_schema(
+            env.base_url,
+            spec.types,  # type: ignore
+        )
+
+    # Launch TUI
+    from vagrant.tui.graphql_app import run_graphql_app
+    run_graphql_app(spec, env)
+
+
 @cli.command("mock")
 @click.argument("spec_path", type=click.Path(exists=True))
 @click.option("--host", "-h", default="127.0.0.1", help="Host to bind to")
