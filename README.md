@@ -96,6 +96,32 @@ The mock server:
 - Logs all requests for inspection
 - Adds `X-Mock-Server: vagrant` header to responses
 
+### GraphQL Explorer (TUI)
+
+Launch an interactive GraphQL explorer:
+
+```bash
+# Basic usage
+vagrant graphql https://api.example.com/graphql
+
+# With authentication
+vagrant graphql https://api.github.com/graphql -H "Authorization:Bearer TOKEN"
+```
+
+The GraphQL TUI provides:
+- **Operation Browser**: Browse queries, mutations, and subscriptions by category
+- **Query Builder**: Build and edit queries with variable support
+- **Response Viewer**: Formatted JSON responses with syntax highlighting
+- **History**: Track and replay previous queries
+- **Search**: Filter operations by name
+
+Keyboard shortcuts:
+- `Tab`: Navigate between panels
+- `/`: Focus search
+- `r`: Replay last query
+- `h`: Toggle history panel
+- `?`: Show help
+
 ### Environments
 
 ```bash
