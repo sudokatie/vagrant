@@ -13,6 +13,12 @@ from vagrant.http.chaining import (
     interpolate_string,
 )
 from vagrant.http.client import HttpClient, HttpRequest, HttpResponse
+from vagrant.http.websocket import (
+    MessageDirection,
+    WebSocketClient,
+    WebSocketConnection,
+    WebSocketMessage,
+)
 
 __all__ = [
     "HttpClient",
@@ -33,4 +39,9 @@ __all__ = [
     "interpolate_list",
     "find_variables",
     "has_unresolved_variables",
+    # WebSocket
+    "WebSocketClient",
+    "WebSocketConnection",
+    "WebSocketMessage",
+    "MessageDirection",
 ]
